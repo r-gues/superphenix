@@ -72,7 +72,7 @@ func UnstructuredDiskToView(disk *unstructured.Unstructured) DiskView {
 	view.Labels = utils.FilterLabels(view.Labels)
 	view.Annotations = utils.FilterAnnotations(view.Annotations)
 	if view.Spec.StorageClassName != nil {
-		storageClassName := convertStorageClassName(*view.Spec.StorageClassName)
+		storageClassName := ConvertStorageClassName(*view.Spec.StorageClassName)
 		view.Spec.StorageClassName = &storageClassName
 	}
 	return view
@@ -94,7 +94,7 @@ func DiskToView(disk v1beta1.DataVolume) DiskView {
 		return DiskView{}
 	}
 	if view.Spec.StorageClassName != nil {
-		storageClassName := convertStorageClassName(*view.Spec.StorageClassName)
+		storageClassName := ConvertStorageClassName(*view.Spec.StorageClassName)
 		view.Spec.StorageClassName = &storageClassName
 	}
 	return view
@@ -181,7 +181,7 @@ func UnstructuredPVCToView(pvc *unstructured.Unstructured) PVCView {
 	view.Labels = utils.FilterLabels(view.Labels)
 	view.Annotations = utils.FilterAnnotations(view.Annotations)
 	if view.Spec.StorageClassName != nil {
-		storageClassName := convertStorageClassName(*view.Spec.StorageClassName)
+		storageClassName := ConvertStorageClassName(*view.Spec.StorageClassName)
 		view.Spec.StorageClassName = &storageClassName
 	}
 	return view
@@ -203,7 +203,7 @@ func PVCToView(pvc corev1.PersistentVolumeClaim) PVCView {
 		return PVCView{}
 	}
 	if view.Spec.StorageClassName != nil {
-		storageClassName := convertStorageClassName(*view.Spec.StorageClassName)
+		storageClassName := ConvertStorageClassName(*view.Spec.StorageClassName)
 		view.Spec.StorageClassName = &storageClassName
 	}
 	return view

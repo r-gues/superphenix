@@ -1,0 +1,74 @@
+{{- range $localID, $db := .Values.databases }}
+{{- if eq $db.location $.Values.location }}
+
+{{- include "sfs-dbaas.validate" (dict "localID" $localID "database" $db) }}
+{{- $effectiveID := include "sfs-dbaas.spxEID" (dict "projectID" $.Values.projectID "localID" $localID) }}
+{{- $labels := dict "root" $ "localID" $localID "effectiveID" $effectiveID "database" $db }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $effectiveID | quote }}
+  namespace: spx-{{ $.Values.projectID }}
+  labels:
+    {{- include "sfs-dbaas.resourceLabels" $labels | nindent 4 }}
+spec:
+  instances: {{ $db.instances | int }}
+  imageName: {{ include "sfs-dbaas.image" (dict "root" $ "database" $db) | quote }}
+
+  # CloudNativePG only propagates the Cluster's metadata to the resources it
+  # generates when the operator is configured with INHERITED_LABELS. These
+  # entries are the ones the platform relies on regardless of that setting:
+  # tenancy filtering, network policies and the load balancer selector all read
+  # them off the generated Pods and PVCs.
+  inheritedMetadata:
+    labels:
+      {{- include "sfs-dbaas.resourceLabels" $labels | nindent 6 }}
+      superphenix.net/workloadClass: dbaas-postgresql
+      superphenix.net/generated: "true"
+
+  resources:
+    requests:
+      cpu: {{ ($db.resources).cpu | default "1" | quote }}
+      memory: {{ ($db.resources).memory | default "2Gi" | quote }}
+    limits:
+      cpu: {{ ($db.resources).cpu | default "1" | quote }}
+      memory: {{ ($db.resources).memory | default "2Gi" | quote }}
+
+  storage:
+    size: {{ $db.storage.size | quote }}
+    {{- with ($db.storage).storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
+
+  {{- with $db.walStorage }}
+  walStorage:
+    size: {{ .size | quote }}
+    {{- with .storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
+  {{- end }}
+
+  bootstrap:
+    initdb:
+      database: {{ ($db.bootstrap).database | default "app" | quote }}
+      owner: {{ ($db.bootstrap).owner | default "app" | quote }}
+
+  {{- with $db.parameters }}
+  postgresql:
+    parameters:
+      {{- range $key, $value := . }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+  {{- end }}
+
+  # Spread the instances across nodes so losing one node cannot take the whole
+  # database down. Required rather than preferred: a database that silently
+  # co-locates its replicas is not highly available.
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: {{ if gt ($db.instances | int) 1 }}required{{ else }}preferred{{ end }}
+
+{{- end }}
+{{- end }}

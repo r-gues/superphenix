@@ -1,0 +1,41 @@
+{{- range $localID, $db := .Values.databases }}
+{{- if eq $db.location $.Values.location }}
+{{- with ($db.network).vip }}
+
+{{- $vip := . }}
+{{- $effectiveID := include "sfs-dbaas.spxEID" (dict "projectID" $.Values.projectID "localID" $localID) }}
+{{- $labels := dict "root" $ "localID" $localID "effectiveID" $effectiveID "database" $db }}
+{{- $port := $.Values.databaseDefaults.port | int }}
+---
+apiVersion: kubeovn.io/v1
+kind: SwitchLBRule
+metadata:
+  name: {{ $effectiveID | quote }}
+  labels:
+    {{- include "sfs-dbaas.resourceLabels" $labels | nindent 4 }}
+spec:
+  # Only target endpoints in the project's namespace
+  namespace: spx-{{ $.Values.projectID }}
+
+  # Virtual IP that will respond to requests, must be part of 198.18.0.0/16 (SPX RFC008)
+  {{- if not (mustRegexMatch "198\\.18\\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})" $vip) }}
+  {{- fail (printf "Database %s VIP %s must be part of 198.18.0.0/16" $localID $vip) }}
+  {{- end }}
+  vip: {{ $vip | quote }}
+
+  ports:
+    - name: {{ printf "%d-%d-tcp" $port $port }}
+      port: {{ $port }}
+      targetPort: {{ $port }}
+      protocol: "TCP"
+
+  # Only the primary accepts writes, so the VIP follows it: CloudNativePG moves
+  # the instanceRole label on failover and the rule follows without any action
+  # from us.
+  selector:
+    - "cnpg.io/cluster:{{ $effectiveID }}"
+    - "cnpg.io/instanceRole:primary"
+
+{{- end }}
+{{- end }}
+{{- end }}

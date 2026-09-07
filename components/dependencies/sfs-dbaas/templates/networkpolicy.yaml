@@ -1,0 +1,54 @@
+{{- range $localID, $db := .Values.databases }}
+{{- if eq $db.location $.Values.location }}
+
+{{- $effectiveID := include "sfs-dbaas.spxEID" (dict "projectID" $.Values.projectID "localID" $localID) }}
+{{- $labels := dict "root" $ "localID" $localID "effectiveID" $effectiveID "database" $db }}
+{{- $port := $.Values.databaseDefaults.port | int }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dbaas-{{ $effectiveID }}
+  namespace: spx-{{ $.Values.projectID }}
+  annotations:
+    # Required on every customer network policy (see the spx-policies "netpol"
+    # admission policy); without it the policy is rejected at admission.
+    ovn.kubernetes.io/network_policy_enforcement: lax
+  labels:
+    {{- include "sfs-dbaas.resourceLabels" $labels | nindent 4 }}
+    superphenix.net/generated: "true"
+spec:
+  podSelector:
+    matchLabels:
+      superphenix.net/resourceEffectiveID: {{ $effectiveID | quote }}
+      superphenix.net/workloadClass: dbaas-postgresql
+  policyTypes:
+    - Ingress
+  ingress:
+    # Instances of the same database must reach each other for streaming
+    # replication and for the operator's own liveness traffic.
+    - from:
+        - podSelector:
+            matchLabels:
+              superphenix.net/resourceEffectiveID: {{ $effectiveID | quote }}
+    # Anything else in the project may connect to PostgreSQL.
+    - from:
+        - podSelector:
+            matchLabels:
+              superphenix.net/projectID: spx-{{ $.Values.projectID }}
+      ports:
+        - port: {{ $port }}
+          protocol: TCP
+    {{- with ($db.network).allowedCidrs }}
+    - from:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - port: {{ $port }}
+          protocol: TCP
+    {{- end }}
+
+{{- end }}
+{{- end }}

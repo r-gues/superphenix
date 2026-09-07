@@ -111,8 +111,8 @@ func TestConvertStorageClassName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertStorageClassName(tt.storageClassName); got != tt.want {
-				t.Errorf("convertStorageClassName() = %v, want %v", got, tt.want)
+			if got := ConvertStorageClassName(tt.storageClassName); got != tt.want {
+				t.Errorf("ConvertStorageClassName() = %v, want %v", got, tt.want)
 			}
 		})
 	}

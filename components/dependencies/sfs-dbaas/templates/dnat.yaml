@@ -1,0 +1,40 @@
+{{- range $localID, $db := .Values.databases }}
+{{- if eq $db.location $.Values.location }}
+{{- with (($db.network).publicAccess) }}
+
+{{- $publicAccess := . }}
+{{- $vip := ($db.network).vip }}
+{{- $externalPort := $publicAccess.externalPort | default $.Values.databaseDefaults.port | int }}
+{{- $port := $.Values.databaseDefaults.port | int }}
+
+{{- /*
+Publish through an EIP the project already owns rather than allocating one
+here: the EIP's lifecycle, its NAT gateway and its subnet stay owned by the
+EIP product. The rule's identity is derived exactly as sfs-iaas derives it, so
+the same tuple yields the same resource whichever chart created it.
+*/}}
+{{- $eipEffectiveIDNoPrefix := include "sfs-dbaas.getUUIDv5" (dict "NS" $.Values.projectID "NAME" $publicAccess.eipLocalId) }}
+{{- $eipEffectiveID := include "sfs-dbaas.spxEID" (dict "projectID" $.Values.projectID "localID" $publicAccess.eipLocalId) }}
+{{- $template := printf "%d-%s-%d-tcp" $externalPort $vip $port }}
+{{- $dnatLocalID := include "sfs-dbaas.getUUIDv5" (dict "NS" $eipEffectiveIDNoPrefix "NAME" $template) }}
+{{- $dnatEffectiveID := include "sfs-dbaas.spxEID" (dict "projectID" $.Values.projectID "localID" $dnatLocalID) }}
+---
+apiVersion: kubeovn.io/v1
+kind: IptablesDnatRule
+metadata:
+  name: {{ $dnatEffectiveID | quote }}
+  labels:
+    {{- include "sfs-dbaas.labels" $ | nindent 4 }}
+    superphenix.net/resourceEffectiveID: {{ $dnatEffectiveID | quote }}
+    superphenix.net/resourceLocalID: {{ $dnatLocalID | quote }}
+    superphenix.net/resourceName: {{ $db.name | default $localID | quote }}
+spec:
+  eip: {{ $eipEffectiveID | quote }}
+  externalPort: {{ $externalPort | quote }}
+  internalPort: {{ $port | quote }}
+  internalIp: {{ $vip | quote }}
+  protocol: "tcp"
+
+{{- end }}
+{{- end }}
+{{- end }}

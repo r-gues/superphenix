@@ -46,7 +46,10 @@ func Transform[T, K interface{}](object T) K {
 	return view
 }
 
-func convertStorageClassName(storageClassName string) string {
+// ConvertStorageClassName maps a cluster storage class name back to the friendly
+// short name products expose. An unmapped class is reported as undefined rather
+// than leaking the infrastructure name.
+func ConvertStorageClassName(storageClassName string) string {
 	for friendlyName, fullname := range config.Global.ProductsConfig.BlockStorage.StorageClassMapping {
 		if fullname == storageClassName {
 			return friendlyName

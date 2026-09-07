@@ -62,7 +62,7 @@ func UnstructuredSnapshotToView(snapshot *unstructured.Unstructured) SnapshotVie
 	view.Labels = utils.FilterLabels(view.Labels)
 	view.Annotations = utils.FilterAnnotations(view.Annotations)
 	if view.Spec.VolumeSnapshotClassName != nil {
-		snapshotClassName := convertStorageClassName(*view.Spec.VolumeSnapshotClassName)
+		snapshotClassName := ConvertStorageClassName(*view.Spec.VolumeSnapshotClassName)
 		view.Spec.VolumeSnapshotClassName = &snapshotClassName
 	}
 	return view
@@ -84,7 +84,7 @@ func SnapshotToView(snapshot v1.VolumeSnapshot) SnapshotView {
 		return SnapshotView{}
 	}
 	if view.Spec.VolumeSnapshotClassName != nil {
-		snapshotClassName := convertStorageClassName(*view.Spec.VolumeSnapshotClassName)
+		snapshotClassName := ConvertStorageClassName(*view.Spec.VolumeSnapshotClassName)
 		view.Spec.VolumeSnapshotClassName = &snapshotClassName
 	}
 	return view

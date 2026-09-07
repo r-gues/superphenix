@@ -79,3 +79,8 @@ type BaaS struct {
 	Resource `json:",inline"`
 	Backup   BaasObject `json:"backup"`
 }
+
+type DBaaS struct {
+	Resource `json:",inline"`
+	Database DatabaseView `json:"database"`
+}

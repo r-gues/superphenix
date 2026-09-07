@@ -24,6 +24,7 @@ const (
 	ProductTypeKaaS          = "kaas"
 	ProductTypeBaaS          = "baas"
 	ProductTypeBucket        = "bucket"
+	ProductTypeDBaaS         = "dbaas"
 )
 
 // ProductTypeReadPermission maps each product type to the permission that gates reading it.

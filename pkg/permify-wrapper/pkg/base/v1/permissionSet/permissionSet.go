@@ -54,6 +54,10 @@ const (
 	ProjectBucketCredentialsAccess = "ProjectBucketCredentialsAccess"
 	ProjectBucketReadOnly          = "ProjectBucketReadOnly"
 
+	ProjectDBaaSFullAccess        = "ProjectDBaaSFullAccess"
+	ProjectDBaaSCredentialsAccess = "ProjectDBaaSCredentialsAccess"
+	ProjectDBaaSReadOnly          = "ProjectDBaaSReadOnly"
+
 	ProjectArgoCdAccess = "ProjectArgoCdAccess"
 )
 
@@ -106,6 +110,10 @@ var PermissionSetsEntityMap = map[string]string{
 	ProjectBucketFullAccess:        entity.Project,
 	ProjectBucketCredentialsAccess: entity.Project,
 	ProjectBucketReadOnly:          entity.Project,
+
+	ProjectDBaaSFullAccess:        entity.Project,
+	ProjectDBaaSCredentialsAccess: entity.Project,
+	ProjectDBaaSReadOnly:          entity.Project,
 
 	ProjectArgoCdAccess: entity.Project,
 }

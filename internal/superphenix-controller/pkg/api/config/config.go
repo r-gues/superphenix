@@ -25,6 +25,13 @@ type StorageClass struct {
 	Fullname  string `json:"fullname"`
 }
 
+// DBaaSConfig is the AZ-side configuration a managed database depends on. It
+// carries the same storage classes as KaaSConfig, kept as its own type so the
+// two products can diverge without breaking each other's clients.
+type DBaaSConfig struct {
+	StorageClasses []StorageClass `json:"storageClasses"`
+}
+
 type S3Config struct {
 	StorageClasses   []string `json:"storageClasses"`
 	MaxBucketSize    string   `json:"maxBucketSize"`
@@ -177,6 +184,34 @@ func GetKaaSConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	b, _ := json.Marshal(kaasConfig)
+	ch.Data(w, http.StatusOK, ch.MIMEJSON, b)
+}
+
+// GetDBaaSConfig
+//
+//	@Summary		Get DBaaS Config
+//	@Description	Get the storage classes available to managed databases on this availability zone
+//	@Tags			v1, Config
+//	@Produce		json
+//	@Param			orgId		path		string		true	"Organization ID"
+//	@Param			projectId	path		string		true	"Project ID"
+//	@Success		200			{object}	DBaaSConfig	"DBaaS Config"
+//	@Failure		500
+//	@Router			/{orgId}/{projectId}/dbaas-config [get]
+//	@Security		Bearer
+func GetDBaaSConfig(w http.ResponseWriter, r *http.Request) {
+	storageClasses := make([]StorageClass, 0, len(config.Global.ProductsConfig.BlockStorage.StorageClassMapping))
+	for k, fullname := range config.Global.ProductsConfig.BlockStorage.StorageClassMapping {
+		storageClasses = append(storageClasses, StorageClass{
+			Shortname: k,
+			Fullname:  fullname,
+		})
+	}
+	sort.Slice(storageClasses, func(i, j int) bool {
+		return storageClasses[i].Shortname < storageClasses[j].Shortname
+	})
+
+	b, _ := json.Marshal(DBaaSConfig{StorageClasses: storageClasses})
 	ch.Data(w, http.StatusOK, ch.MIMEJSON, b)
 }
 

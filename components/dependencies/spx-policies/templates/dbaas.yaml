@@ -1,0 +1,143 @@
+{{- range $name, $val := .Values.policies }}
+{{- if eq $name "dbaas" }}
+
+---
+# ---------------------------------------------------------------------------
+# Check that DBaaS resources are correctly identified and stay within what a
+# tenant is allowed to run. Databases can be created straight through GitOps,
+# so these are the only guardrails between a tenant's manifest and the
+# virtualization cluster.
+# ---------------------------------------------------------------------------
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: vap-{{ $name }}
+  labels:
+    {{- include "policies.labels" $ | nindent 4 }}
+spec:
+  variables:
+    - name: labels
+      expression: "has(object.metadata.labels) ? object.metadata.labels : {}"
+    - name: gitopsLabel
+      expression: r{{ include "policies.gitopsLabel" "" }}
+    - name: gitopsPossibleValues
+      expression: '["true", "false"]'
+    - name: spxidLabels
+      expression: {{ include "policies.iaasLabels" "spxid" | toJson }}
+    - name: spxidRegex
+      expression: r{{ include "policies.regex" "spxid" }}
+    - name: localIDLabel
+      expression: r{{ include "policies.iaasLabels" "localid" }}
+    - name: effectiveIDLabel
+      expression: r{{ include "policies.resEffectiveIDLabel" . }}
+    - name: nameLabels
+      expression: {{ include "policies.iaasLabels" "name" | toJson }}
+    - name: nameSyntax
+      expression: r{{ include "policies.regex" "name" }}
+    - name: allowedImagePrefixes
+      expression: {{ $val.allowedImagePrefixes | default (list "ghcr.io/cloudnative-pg/") | toJson | quote }}
+    - name: imageName
+      expression: 'has(object.spec) && has(object.spec.imageName) ? object.spec.imageName : ""'
+    - name: affinity
+      expression: 'has(object.spec) && has(object.spec.affinity) ? object.spec.affinity : {}'
+  failurePolicy: Fail
+  {{- include "policies.matchConditions" $val | nindent 2 }}
+  matchConstraints:
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector: {}
+    resourceRules:
+      - apiGroups: ["postgresql.cnpg.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["clusters", "poolers", "backups", "scheduledbackups", "databases"]
+        scope: '*'
+  validations:
+    # Check 'gitops' label
+    - expression: '!(variables.gitopsLabel in variables.labels) || variables.labels[variables.gitopsLabel] in variables.gitopsPossibleValues'
+      messageExpression: '"##### " + object.kind + " has a missing or incorrect \"" + variables.gitopsLabel + "\" label. #####"'
+      message: "##### 'gitops' label missing or incorrect #####"
+    # Check SPXID labels
+    - expression: "variables.spxidLabels.all(entry, entry in variables.labels)"
+      messageExpression: |
+        "##### " + object.kind +
+        " is missing required labels : " +
+        variables.spxidLabels
+        .filter(entry, !(entry in variables.labels))
+        .join(", ") + " #####"
+      message: "##### SPXID label(s) missing #####"
+    - expression: 'variables.spxidLabels.all(entry, variables.labels[entry].matches(variables.spxidRegex))'
+      messageExpression: |
+        "##### " + object.kind +
+        " has an incorrect SPXID regex for labels: " +
+        variables.labels.filter(entry,
+          entry in variables.spxidLabels &&
+          !variables.labels[entry].matches(variables.spxidRegex))
+        .join(", ") + " #####"
+      message: "##### SPXID label(s) regex error #####"
+    # Check 'localID' label
+    - expression: |
+        variables.localIDLabel in variables.labels &&
+        variables.labels[variables.localIDLabel].matches(variables.nameSyntax)
+      messageExpression: '"##### " + object.kind + " has a missing or incorrect \"" + variables.localIDLabel + "\" label. #####"'
+      message: "##### 'localID' label missing or incorrect #####"
+    # Check Name labels, required for gitops resources
+    - expression: |
+        !(
+          variables.gitopsLabel in variables.labels &&
+          variables.labels[variables.gitopsLabel] == 'true'
+        ) ||
+        variables.nameLabels.all(entry, entry in variables.labels)
+      messageExpression: |
+        "##### " + object.kind +
+        " is missing required labels : " +
+        variables.nameLabels
+        .filter(entry, !(entry in variables.labels))
+        .join(", ") + " #####"
+      message: "##### Name label(s) missing #####"
+    # Check that the resource is named after its effective ID, so a tenant
+    # cannot squat the name of another project's database.
+    - expression: 'object.metadata.name == variables.labels[variables.effectiveIDLabel]'
+      messageExpression: |
+        "##### " + object.kind +
+        " name (" + object.metadata.name +
+        ") does not match effectiveID: " +
+        variables.labels[variables.effectiveIDLabel] + " #####"
+      message: "##### Resource name doesn't match effective ID #####"
+    # Check that the database runs a platform image. Without this a Cluster is
+    # an arbitrary container running in the customer namespace under the
+    # database operator's service account.
+    - expression: |
+        object.kind != "Cluster" ||
+        variables.imageName == "" ||
+        variables.allowedImagePrefixes.exists(prefix, variables.imageName.startsWith(prefix))
+      messageExpression: |
+        "##### " + object.kind +
+        " image (" + variables.imageName +
+        ") must start with one of: " +
+        variables.allowedImagePrefixes.join(", ") + " #####"
+      message: "##### Database image is not an allowed image #####"
+    # Check that the database does not pick its own nodes: scheduling onto
+    # infrastructure nodes is not a tenant's decision.
+    - expression: |
+        object.kind != "Cluster" ||
+        !(
+          has(variables.affinity.nodeSelector) ||
+          has(variables.affinity.tolerations) ||
+          has(variables.affinity.additionalPodAffinity) ||
+          has(variables.affinity.nodeAffinity)
+        )
+      messageExpression: '"##### " + object.kind + " must not set node scheduling constraints. #####"'
+      message: "##### Database must not set node scheduling constraints #####"
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: vap-{{ $name }}-binding
+spec:
+  policyName: vap-{{ $name }}
+  validationActions: {{ $val.validationActions }}
+  {{- include "policies.debug" $val | indent 2 }}
+{{- end }}
+{{- end }}

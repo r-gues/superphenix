@@ -60,6 +60,30 @@ func ResolveKubeVersionRepo(versions []KubeVersionConfig, def RepoArgoAppConfig,
 	return RepoArgoAppConfig{}, false
 }
 
+// PostgresVersionConfig is a supported PostgreSQL major version with an optional
+// chart repo override and an optional container image override. When Repo is set
+// it fully replaces the default DBaaS repo; an empty Image lets the sfs-dbaas
+// chart pick its own default for that major.
+type PostgresVersionConfig struct {
+	Version string             `yaml:"version"`
+	Image   string             `yaml:"image,omitempty"`
+	Repo    *RepoArgoAppConfig `yaml:"repo,omitempty"`
+}
+
+// ResolvePostgresVersion returns the effective repo and image for version and
+// whether the version is supported. A version's own Repo fully replaces def.
+func ResolvePostgresVersion(versions []PostgresVersionConfig, def RepoArgoAppConfig, version string) (RepoArgoAppConfig, string, bool) {
+	for _, v := range versions {
+		if v.Version == version {
+			if v.Repo != nil {
+				return *v.Repo, v.Image, true
+			}
+			return def, v.Image, true
+		}
+	}
+	return RepoArgoAppConfig{}, "", false
+}
+
 // AZConfig represents an Availability Zone defined in configuration
 type AZConfig struct {
 	Code          string   `yaml:"-"`
@@ -196,6 +220,11 @@ type Config struct {
 					MaxHour int `yaml:"maxHour"`
 				} `yaml:"schedule"`
 			} `yaml:"backup"`
+
+			Database struct {
+				Repo             RepoArgoAppConfig       `yaml:"repo"`
+				PostgresVersions []PostgresVersionConfig `yaml:"postgresVersions,omitempty"`
+			} `yaml:"database"`
 		} `yaml:"argoApp"`
 
 		DefaultVPC struct {
@@ -313,6 +342,11 @@ productsConfig:
       schedule:
         minHour: 20
         maxHour: 23
+    database:
+      repo:
+        repoURL: ""
+        targetRevision: ""
+      postgresVersions: []
   defaultVpc:
     productName: "default"
   defaultSubnet:

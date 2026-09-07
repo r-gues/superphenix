@@ -1,0 +1,124 @@
+# -- Superphénix organization to which this project belongs, must be a generated UUIDv4.
+# This ID must come from the SPX API, this parameter cannot be overriden by the user.
+# @section -- Organization parameters
+organizationID: "00000000-0000-0000-0000-000000000000"
+# -- Superphénix organization's friendly name.
+# This parameter cannot be overriden by the user.
+# @section -- Organization parameters
+organizationName: "null"
+
+# -- Superphénix project to which this project belongs, must be a project within the organization, must be a generated UUIDv4.
+# This ID must come from the SPX API, this parameter cannot be overriden by the user.
+# @section -- Organization parameters
+projectID: "00000000-0000-0000-0000-000000000000"
+# -- Superphénix project's friendly name.
+# This ID must come from the SPX API, this parameter cannot be overriden by the user.
+# @section -- Organization parameters
+projectName: "null"
+
+# -- AZ in which we're deploying this chart.
+# This parameter cannot be overriden by the user.
+# @section -- Organization parameters
+location: ""
+
+# -- Whether this chart is deployed through GitOps or not.
+# This parameter cannot be overriden by the user.
+# @section -- Organization parameters
+gitops: false
+
+# -- Defaults applied to every database that does not set the value itself.
+# @section -- Databases
+databaseDefaults:
+  # -- Container image repository used to run PostgreSQL. The major version is
+  # appended as the tag when a database does not pin an explicit `image`.
+  # @section -- Databases
+  imageRepository: "ghcr.io/cloudnative-pg/postgresql"
+  # -- Port PostgreSQL listens on. Changing it is not supported.
+  # @section -- Databases
+  port: 5432
+
+# -- Defines the managed databases to be created.
+# Each key defines a new database, and is its local ID.
+# See values.yaml for the complete syntax.
+# @section -- Databases
+# @default -- {}
+databases: {}
+  # my-database:
+  #  # -- User-friendly name of the database
+  #  # @section -- Databases
+  #  name: "my-database"
+  #
+  #  # -- AZ in which to deploy the database
+  #  # @section -- Databases
+  #  location: ""
+  #
+  #  # -- Database engine. Only "postgresql" is supported.
+  #  # @section -- Databases
+  #  engine: "postgresql"
+  #
+  #  # -- PostgreSQL major version
+  #  # @section -- Databases
+  #  version: "17"
+  #
+  #  # -- Container image to run. Defaults to
+  #  # "<databaseDefaults.imageRepository>:<version>".
+  #  # @section -- Databases
+  #  image: ""
+  #
+  #  # -- Number of PostgreSQL instances: one primary and N-1 replicas.
+  #  # A single instance has no high availability.
+  #  # @section -- Databases
+  #  instances: 3
+  #
+  #  # -- CPU and memory allocated to each instance. Both are used as the
+  #  # request and the limit, so a database is never throttled by a noisy
+  #  # neighbour and never bursts beyond what it was sized for.
+  #  # @section -- Databases
+  #  resources:
+  #    cpu: "2"
+  #    memory: "8Gi"
+  #
+  #  # -- Data volume of each instance. An empty storageClass uses the
+  #  # cluster default.
+  #  # @section -- Databases
+  #  storage:
+  #    size: "50Gi"
+  #    storageClass: ""
+  #
+  #  # -- Optional dedicated WAL volume of each instance. Omit to keep the WAL
+  #  # on the data volume. It cannot be removed once enabled.
+  #  # @section -- Databases
+  #  walStorage:
+  #    size: "10Gi"
+  #    storageClass: ""
+  #
+  #  # -- Application database and its owner, created once at initialisation.
+  #  # Changing these after creation has no effect.
+  #  # @section -- Databases
+  #  bootstrap:
+  #    database: "app"
+  #    owner: "app"
+  #
+  #  # -- postgresql.conf overrides.
+  #  # @section -- Databases
+  #  parameters: {}
+  #
+  #  # -- How the database is reachable.
+  #  # @section -- Databases
+  #  network:
+  #    # -- Optional stable address on the project's network, in 198.18.0.0/16.
+  #    # Without it the database is only reachable through its in-cluster
+  #    # service name, which does not survive outside the overlay.
+  #    vip: ""
+  #
+  #    # -- Extra CIDRs allowed to reach the PostgreSQL port, on top of the
+  #    # project itself.
+  #    allowedCidrs: []
+  #
+  #    # -- Optionally publish the VIP through an EIP the project already owns.
+  #    # Requires `vip` to be set.
+  #    publicAccess:
+  #      # -- Local ID of the EIP to publish through
+  #      eipLocalId: ""
+  #      # -- Port to publish on the EIP
+  #      externalPort: 5432

@@ -98,6 +98,11 @@ type BaaSFullResponse struct {
 	Backup          interface{} `json:"backup"`
 }
 
+type DBaaSFullResponse struct {
+	ProductResponse `json:",inline"`
+	Database        interface{} `json:"database"`
+}
+
 type AppSpecFullResponse struct {
 	ProductResponse `json:",inline"`
 	Spec            interface{} `json:"spec"`

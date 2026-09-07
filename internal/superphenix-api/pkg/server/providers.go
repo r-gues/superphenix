@@ -10,6 +10,7 @@ import (
 	argoApp "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/argo-app"
 	baasctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/baas"
 	bucketctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/bucket"
+	dbaasctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/dbaas"
 	diskctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/disk"
 	eipctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/eip"
 	instancectrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/instance"
@@ -61,6 +62,7 @@ type Providers struct {
 	Bucket        RegisterFunc
 	Snapshot      RegisterFunc
 	BaaS          RegisterFunc
+	DBaaS         RegisterFunc
 	VPC           RegisterFunc
 	Subnet        RegisterFunc
 	Eip           RegisterFunc
@@ -99,6 +101,7 @@ func DefaultProviders() Providers {
 		Bucket:        bucketctrl.ProvideService,
 		Snapshot:      snapshotctrl.ProvideService,
 		BaaS:          baasctrl.ProvideService,
+		DBaaS:         dbaasctrl.ProvideService,
 		VPC:           vpcctrl.ProvideService,
 		Subnet:        subnetctrl.ProvideService,
 		Eip:           eipctrl.ProvideService,
@@ -123,7 +126,7 @@ func (p Providers) registerPublic(cfg *config.Config, reg *router.Registry) {
 	for _, register := range []RegisterFunc{
 		p.Organization, p.Session, p.APIToken, p.AZ, p.User, p.Group, p.IAM,
 		p.Permission, p.Project, p.ProjectMgr,
-		p.Instance, p.VmSnapshot, p.Disk, p.Bucket, p.Snapshot, p.BaaS, p.VPC, p.Subnet,
+		p.Instance, p.VmSnapshot, p.Disk, p.Bucket, p.Snapshot, p.BaaS, p.DBaaS, p.VPC, p.Subnet,
 		p.Eip, p.LoadBalancer, p.SecurityGroup, p.SSH, p.KaaS, p.Metadata, p.Summary, p.Argo,
 	} {
 		if register == nil {

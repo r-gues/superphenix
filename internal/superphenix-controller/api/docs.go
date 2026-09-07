@@ -649,6 +649,253 @@ const docTemplate = `{
                 }
             }
         },
+        "/{orgId}/{projectId}/dbaas": {
+            "get": {
+                "description": "Retrieve all managed databases of a project",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "Database"
+                ],
+                "summary": "Retrieve all databases",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Databases",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/view.DBaaS"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/{orgId}/{projectId}/dbaas-config": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get the storage classes available to managed databases on this availability zone",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "Config"
+                ],
+                "summary": "Get DBaaS Config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DBaaS Config",
+                        "schema": {
+                            "$ref": "#/definitions/config.DBaaSConfig"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/{orgId}/{projectId}/dbaas/localId/{localId}": {
+            "get": {
+                "description": "Get a managed database by local ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "Database"
+                ],
+                "summary": "Get database by local ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Database Local ID",
+                        "name": "localId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Database",
+                        "schema": {
+                            "$ref": "#/definitions/view.DBaaS"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/{orgId}/{projectId}/dbaas/{effectiveId}": {
+            "get": {
+                "description": "Get a managed database by effective ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "Database"
+                ],
+                "summary": "Get database by effective ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Database Effective ID",
+                        "name": "effectiveId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Database",
+                        "schema": {
+                            "$ref": "#/definitions/view.DBaaS"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/{orgId}/{projectId}/dbaas/{effectiveId}/credentials": {
+            "get": {
+                "description": "Get the connection credentials of a managed database",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "Database"
+                ],
+                "summary": "Get database credentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Database Effective ID",
+                        "name": "effectiveId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Credentials",
+                        "schema": {
+                            "$ref": "#/definitions/view.DatabaseCredentialsView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
         "/{orgId}/{projectId}/disk": {
             "get": {
                 "description": "Retrieve all Disks for a project",
@@ -4818,6 +5065,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "config.DBaaSConfig": {
+            "type": "object",
+            "properties": {
+                "storageClasses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.StorageClass"
                     }
                 }
             }
@@ -13220,6 +13478,35 @@ const docTemplate = `{
                 }
             }
         },
+        "view.DBaaS": {
+            "type": "object",
+            "properties": {
+                "codeAZ": {
+                    "type": "string"
+                },
+                "database": {
+                    "$ref": "#/definitions/view.DatabaseView"
+                },
+                "eid": {
+                    "description": "effective ID",
+                    "type": "string"
+                },
+                "gitops": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "local ID",
+                    "type": "string"
+                },
+                "productName": {
+                    "description": "human-readable name",
+                    "type": "string"
+                },
+                "resourceTypeId": {
+                    "type": "string"
+                }
+            }
+        },
         "view.DNATView": {
             "type": "object",
             "properties": {
@@ -13304,6 +13591,154 @@ const docTemplate = `{
                 },
                 "volumeMode": {
                     "type": "string"
+                }
+            }
+        },
+        "view.DatabaseCredentialsView": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "uri": {
+                    "description": "Uri is the ready-to-use libpq connection string.",
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "view.DatabaseResourcesView": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "type": "string"
+                },
+                "memory": {
+                    "type": "string"
+                }
+            }
+        },
+        "view.DatabaseSpecView": {
+            "type": "object",
+            "properties": {
+                "engine": {
+                    "description": "Engine is always \"postgresql\" today; it is surfaced so clients can branch\non it once a second engine exists.",
+                    "type": "string"
+                },
+                "imageName": {
+                    "description": "ImageName is the container image actually running.",
+                    "type": "string"
+                },
+                "instances": {
+                    "description": "Instances is the requested number of PostgreSQL instances.",
+                    "type": "integer"
+                },
+                "parameters": {
+                    "description": "Parameters are the effective postgresql.conf overrides.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "resources": {
+                    "description": "Resources are the per-instance CPU/memory requests.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/view.DatabaseResourcesView"
+                        }
+                    ]
+                },
+                "storage": {
+                    "description": "Storage is the data volume of each instance.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/view.DatabaseStorageView"
+                        }
+                    ]
+                },
+                "version": {
+                    "description": "Version is the PostgreSQL major version, derived from the image.",
+                    "type": "string"
+                },
+                "walStorage": {
+                    "description": "WalStorage is the dedicated WAL volume, when one was requested.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/view.DatabaseStorageView"
+                        }
+                    ]
+                }
+            }
+        },
+        "view.DatabaseStatusView": {
+            "type": "object",
+            "properties": {
+                "currentPrimary": {
+                    "description": "CurrentPrimary is the pod currently accepting writes.",
+                    "type": "string"
+                },
+                "instances": {
+                    "description": "Instances is the number of instances that actually exist.",
+                    "type": "integer"
+                },
+                "phase": {
+                    "description": "Phase is CloudNativePG's human-readable cluster phase.",
+                    "type": "string"
+                },
+                "phaseReason": {
+                    "description": "PhaseReason details Phase when the cluster is not healthy.",
+                    "type": "string"
+                },
+                "readService": {
+                    "type": "string"
+                },
+                "readyInstances": {
+                    "description": "ReadyInstances is the number of instances currently serving.",
+                    "type": "integer"
+                },
+                "targetPrimary": {
+                    "description": "TargetPrimary is the pod the operator is failing over to, when different.",
+                    "type": "string"
+                },
+                "writeService": {
+                    "description": "WriteService and ReadService are the in-cluster service names.",
+                    "type": "string"
+                }
+            }
+        },
+        "view.DatabaseStorageView": {
+            "type": "object",
+            "properties": {
+                "size": {
+                    "type": "string"
+                },
+                "storageClass": {
+                    "type": "string"
+                }
+            }
+        },
+        "view.DatabaseView": {
+            "type": "object",
+            "properties": {
+                "metadata": {
+                    "$ref": "#/definitions/view.ObjectMeta"
+                },
+                "spec": {
+                    "$ref": "#/definitions/view.DatabaseSpecView"
+                },
+                "status": {
+                    "$ref": "#/definitions/view.DatabaseStatusView"
                 }
             }
         },
