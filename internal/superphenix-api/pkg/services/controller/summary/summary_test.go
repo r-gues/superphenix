@@ -41,6 +41,11 @@ func TestFilterReadable(t *testing.T) {
 			want:    []string{model.ProductTypeBucket, model.ProductTypeKaaS},
 		},
 		{
+			name:    "dbaas read",
+			granted: map[string]bool{pwPermission.ProjectDBaaSRead: true},
+			want:    []string{model.ProductTypeDBaaS},
+		},
+		{
 			name:    "permission that gates no product type",
 			granted: map[string]bool{pwPermission.ProjectArgoCdRead: true, pwPermission.ProjectRead: true},
 			want:    []string{},

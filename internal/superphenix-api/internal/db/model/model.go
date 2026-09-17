@@ -42,6 +42,7 @@ var ProductTypeReadPermission = map[string]string{
 	ProductTypeKaaS:          pwPermission.ProjectKaaSRead,
 	ProductTypeBaaS:          pwPermission.ProjectBaaSRead,
 	ProductTypeBucket:        pwPermission.ProjectBucketRead,
+	ProductTypeDBaaS:         pwPermission.ProjectDBaaSRead,
 }
 
 type Model struct {
