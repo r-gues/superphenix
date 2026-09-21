@@ -65,8 +65,10 @@ func Insert(ctx context.Context, event model.AuditEvent) (uuid.UUID, error) {
 		"source_ip":       event.SourceIp,
 		"remote_addr":     event.RemoteAddr,
 		"status":          event.Status,
+		"status_code":     event.StatusCode,
 		"request_id":      event.RequestId,
 		"started_at":      event.StartedAt,
+		"completed_at":    event.CompletedAt,
 	})
 
 	return id, res.Error

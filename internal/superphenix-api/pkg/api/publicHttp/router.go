@@ -31,6 +31,7 @@ import (
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/region/az"
 
 	"github.com/super-phenix/superphenix/internal/superphenix-api/api"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/audit"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/config"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/metrics"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/opentelemetry/tracing"
@@ -48,12 +49,18 @@ func RegisterModules(cfg *config.Config, reg *router.Registry) {
 	reg.Use("request-id", middleware.RequestID)
 	reg.Use("logger", middleware.Logger)
 	reg.Use("recoverer", middleware.Recoverer)
+	// RealIP overwrites RemoteAddr, the audit log keeps the raw peer too.
+	reg.Use("peer-addr", audit.CapturePeerAddr)
 	reg.Use("real-ip", middleware.RealIP)
 	reg.Use("clean-path", middleware.CleanPath)
 	reg.Use("tracing", tracing.MiddlewareHTTP)
 	reg.Use("metrics", metrics.MiddlewareHTTP)
 	reg.Use("cors", sessionCorsMiddleware(cfg))
 	reg.Use("heartbeat", middleware.Heartbeat(cfg.PublicHTTP.HealthEndpoint))
+
+	if cfg.AuditLog.Enabled {
+		reg.SetAuditor(audit.Middleware(audit.DBStore{}))
+	}
 
 	reg.Register(swaggerModule(cfg))
 }
