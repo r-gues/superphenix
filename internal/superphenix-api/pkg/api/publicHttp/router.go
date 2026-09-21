@@ -21,6 +21,7 @@ import (
 	summaryctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/summary"
 	vmsnapshotctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/vmsnapshot"
 	vpcctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/vpc"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/auditlog"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/group"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/membership"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/organization"
@@ -88,6 +89,7 @@ func wirePublicRoutes() chi.Router {
 	permission.ProvideService(&config.Global, reg)
 	project.ProvideService(&config.Global, reg)
 	manager.ProvideService(&config.Global, reg)
+	auditlog.ProvideService(&config.Global, reg)
 
 	instancectrl.ProvideService(&config.Global, reg)
 	vmsnapshotctrl.ProvideService(&config.Global, reg)

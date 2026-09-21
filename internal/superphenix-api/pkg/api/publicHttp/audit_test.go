@@ -24,6 +24,7 @@ import (
 	summaryctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/summary"
 	vmsnapshotctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/vmsnapshot"
 	vpcctrl "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller/vpc"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/auditlog"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/group"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/membership"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/iam/organization"
@@ -53,6 +54,7 @@ func declaredRegistry() *router.Registry {
 		permission.Module(permission.New(cfg)),
 		project.Module(project.New(cfg)),
 		manager.Module(cfg, manager.New(cfg)),
+		auditlog.Module(auditlog.New(cfg)),
 
 		instancectrl.Module(cfg, instancectrl.New(cfg)),
 		vmsnapshotctrl.Module(cfg, vmsnapshotctrl.New(cfg)),
