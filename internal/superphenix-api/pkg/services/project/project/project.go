@@ -63,6 +63,9 @@ func (h *Service) CreateOrUpdateProject(w http.ResponseWriter, r *http.Request) 
 
 	var p model.APIProject
 	audit.SetResource(r.Context(), body.Id)
+	if projectUuid, err := uuid.Parse(body.Id); err == nil {
+		audit.SetProject(r.Context(), projectUuid)
+	}
 	if body.Id != "" {
 		p, err = project.UpdateProject(r.Context(), orgaUuid, body.Id, body.Name)
 		if err != nil {
@@ -90,6 +93,7 @@ func (h *Service) CreateOrUpdateProject(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		audit.SetResource(r.Context(), p.ID.String())
+		audit.SetProject(r.Context(), p.ID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -122,6 +126,10 @@ func (h *Service) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		log.Error().Msg("No project id found")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
+	}
+
+	if projectUuid, err := uuid.Parse(projectId); err == nil {
+		audit.SetProject(r.Context(), projectUuid)
 	}
 
 	if err := RemoveProject(r.Context(), orgaId, projectId); err != nil {

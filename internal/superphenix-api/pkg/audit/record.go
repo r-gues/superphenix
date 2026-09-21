@@ -48,6 +48,8 @@ type Record struct {
 	id    uuid.UUID
 	// begun is true once the attempted row is stored.
 	begun bool
+	// failed is set by Fail for a refusal the status code does not show.
+	failed bool
 }
 
 func fromContext(ctx context.Context) *Record {
@@ -115,6 +117,16 @@ func SetProject(ctx context.Context, projectId uuid.UUID) {
 	}
 }
 
+// Fail records the action as failed whatever the status code, for a refusal answered with a
+// redirect.
+func Fail(ctx context.Context) {
+	if record := fromContext(ctx); record != nil {
+		record.mu.Lock()
+		record.failed = true
+		record.mu.Unlock()
+	}
+}
+
 // complete writes the outcome. Without a user there is nothing to write. When the attempted row
 // could not be stored, the event is inserted in its final state instead.
 func (record *Record) complete(ctx context.Context, statusCode int) {
@@ -125,7 +137,7 @@ func (record *Record) complete(ctx context.Context, statusCode int) {
 	}
 
 	status := model.AuditStatusSuccess
-	if statusCode >= 400 {
+	if statusCode >= 400 || record.failed {
 		status = model.AuditStatusFailed
 	}
 	now := time.Now()
