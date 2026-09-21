@@ -182,6 +182,8 @@ type Config struct {
 		} `yaml:"garbageCollection"`
 	}
 
+	AuditLog AuditLogConfig `yaml:"auditLog"`
+
 	Database struct {
 		Host     string
 		Port     string
@@ -303,6 +305,17 @@ argoController:
     labelMarkKey: "superphenix.net/markedForDeletion"
     delay: 48h
     debug: false
+auditLog:
+  enabled: true
+  retention:
+    defaultDays: 90
+    minDays: 1
+    maxDays: 365
+  garbageCollection:
+    enabled: true
+    interval: 1h
+    timeout: 10m
+    batchSize: 5000
 database:
   host: ""
   port: ""
@@ -403,6 +416,51 @@ func LoadConfig() error {
 	return nil
 }
 
+// maxAuditLogBatchSize caps how many events one delete statement of the sweep removes.
+const maxAuditLogBatchSize = 50000
+
+// AuditLogConfig drives the audit log. Retention bounds the per-organization
+// override; DefaultDays applies to organizations without one and to events
+// attached to no organization.
+type AuditLogConfig struct {
+	Enabled   bool `yaml:"enabled"`
+	Retention struct {
+		DefaultDays int `yaml:"defaultDays"`
+		MinDays     int `yaml:"minDays"`
+		MaxDays     int `yaml:"maxDays"`
+	} `yaml:"retention"`
+	GarbageCollection struct {
+		Enabled   bool          `yaml:"enabled"`
+		Interval  time.Duration `yaml:"interval"`
+		Timeout   time.Duration `yaml:"timeout"`
+		BatchSize int           `yaml:"batchSize"`
+	} `yaml:"garbageCollection"`
+}
+
+func (a *AuditLogConfig) validate() []string {
+	if !a.Enabled {
+		return nil
+	}
+
+	var errs []string
+	retention := a.Retention
+	if retention.MinDays < 1 || retention.MinDays > retention.DefaultDays || retention.DefaultDays > retention.MaxDays {
+		errs = append(errs, "auditLog.retention must satisfy 1 <= minDays <= defaultDays <= maxDays")
+	}
+
+	gc := a.GarbageCollection
+	if !gc.Enabled {
+		return errs
+	}
+	if gc.Interval <= 0 || gc.Timeout <= 0 {
+		errs = append(errs, "auditLog.garbageCollection.interval and timeout must be positive")
+	}
+	if gc.BatchSize < 1 || gc.BatchSize > maxAuditLogBatchSize {
+		errs = append(errs, fmt.Sprintf("auditLog.garbageCollection.batchSize must be between 1 and %d", maxAuditLogBatchSize))
+	}
+	return errs
+}
+
 // Validate enforces security-sensitive invariants on a loaded configuration.
 // Called at the end of LoadConfig; a non-nil error must abort startup.
 func (c *Config) Validate() error {
@@ -442,6 +500,8 @@ func (c *Config) Validate() error {
 	if hasWildcard && c.Session.Cors.AllowUnsafeWildcard {
 		log.Print("WARNING: session.cors.allowedOrigins contains \"*\" and allowUnsafeWildcard is enabled — do not use this configuration in production")
 	}
+
+	errs = append(errs, c.AuditLog.validate()...)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid configuration:\n  - %s", strings.Join(errs, "\n  - "))
