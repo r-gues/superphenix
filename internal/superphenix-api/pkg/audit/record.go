@@ -98,6 +98,16 @@ func SetResource(ctx context.Context, resourceId string) {
 	}
 }
 
+// ClearResource drops the resource reported by SetResource, for a creation that was rolled
+// back: the event must not point at something that never existed.
+func ClearResource(ctx context.Context) {
+	if record := fromContext(ctx); record != nil {
+		record.mu.Lock()
+		record.event.ResourceId = nil
+		record.mu.Unlock()
+	}
+}
+
 // SetOrganization attaches the event to an organization the URL does not carry, such as the
 // one a request just created.
 func SetOrganization(ctx context.Context, organizationId uuid.UUID) {

@@ -16,6 +16,7 @@ import (
 	"github.com/super-phenix/superphenix/internal/superphenix-api/internal/db/model"
 	httpModel "github.com/super-phenix/superphenix/internal/superphenix-api/pkg/api/publicHttp/model"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/api/publicHttp/proxy"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/audit"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/config"
 	httpError "github.com/super-phenix/superphenix/pkg/utils/error"
 	logger "github.com/super-phenix/superphenix/pkg/utils/log"
@@ -186,6 +187,8 @@ func CleanDb(ctx context.Context, id uuid.UUID) {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete product")
 	}
+	// The product was rolled back, its ID must not stay on the audit event.
+	audit.ClearResource(ctx)
 }
 
 func HandleControllerError(w http.ResponseWriter, r *http.Request, resp *http.Response, failureCode int, failureMessage string) {

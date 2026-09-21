@@ -120,6 +120,18 @@ func TestMiddleware(t *testing.T) {
 			wantResId:   "spx-1",
 		},
 		{
+			name:  "rolled back creation keeps no resource",
+			chain: []router.Middleware{authenticate},
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				SetResource(r.Context(), "spx-new")
+				ClearResource(r.Context())
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			path:        "/" + orgId.String() + "/disk",
+			wantInserts: []string{model.AuditStatusAttempted},
+			wantFinal:   &auditEvent.Completion{Status: model.AuditStatusFailed, StatusCode: http.StatusInternalServerError},
+		},
+		{
 			name:        "panic is a failed event and keeps propagating",
 			chain:       []router.Middleware{authenticate},
 			handler:     func(http.ResponseWriter, *http.Request) { panic("boom") },
@@ -183,9 +195,13 @@ func TestMiddleware(t *testing.T) {
 				got := store.finalized[0]
 				assert.Equal(t, tt.wantFinal.Status, got.Status)
 				assert.Equal(t, tt.wantFinal.StatusCode, got.StatusCode)
-				assert.Equal(t, &projectId, got.ProjectId)
+				if tt.path == "" {
+					assert.Equal(t, &projectId, got.ProjectId)
+				}
 				assert.False(t, got.CompletedAt.IsZero())
-				if assert.NotNil(t, got.ResourceId) {
+				if tt.wantResId == "" {
+					assert.Nil(t, got.ResourceId)
+				} else if assert.NotNil(t, got.ResourceId) {
 					assert.Equal(t, tt.wantResId, *got.ResourceId)
 				}
 			}
@@ -201,6 +217,7 @@ func TestRecordFunctionsWithoutRecord(t *testing.T) {
 		{name: "Begin", call: func(ctx context.Context) { Begin(ctx, uuid.NewString(), "JwtBearer") }},
 		{name: "SetResource", call: func(ctx context.Context) { SetResource(ctx, "spx-1") }},
 		{name: "Fail", call: func(ctx context.Context) { Fail(ctx) }},
+		{name: "ClearResource", call: func(ctx context.Context) { ClearResource(ctx) }},
 		{name: "SetProject", call: func(ctx context.Context) { SetProject(ctx, uuid.New()) }},
 	}
 
