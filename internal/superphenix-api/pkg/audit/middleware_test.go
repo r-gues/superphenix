@@ -198,3 +198,50 @@ func TestRecordFunctionsWithoutRecord(t *testing.T) {
 		})
 	}
 }
+
+func TestMiddlewareResolvesResourceId(t *testing.T) {
+	userId := uuid.New()
+	fromParam, fromQuery := "g-1", "g-2"
+
+	tests := []struct {
+		name        string
+		declaration router.Audit
+		target      string
+		want        *string
+	}{
+		{
+			name:        "from the url param",
+			declaration: router.Audit{ResourceType: "iam.group", Action: "duplicate", ResourceParam: "groupId"},
+			target:      "/group/g-1",
+			want:        &fromParam,
+		},
+		{
+			name:        "from the query param",
+			declaration: router.Audit{ResourceType: "iam.group", Action: router.ActionDelete, ResourceQuery: "groupId"},
+			target:      "/group?groupId=g-2",
+			want:        &fromQuery,
+		},
+		{
+			name:        "absent when nothing carries it",
+			declaration: router.Audit{ResourceType: "iam.group", Action: router.ActionDelete, ResourceQuery: "groupId"},
+			target:      "/group",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &fakeStore{}
+			handler := func(_ http.ResponseWriter, r *http.Request) { Begin(r.Context(), userId.String(), "JwtBearer") }
+
+			root := chi.NewRouter()
+			audited := root.With(Middleware(store)(tt.declaration))
+			audited.Delete("/group", handler)
+			audited.Delete("/group/{groupId}", handler)
+			root.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodDelete, tt.target, nil))
+
+			if assert.Len(t, store.inserted, 1) {
+				assert.Equal(t, tt.want, store.inserted[0].ResourceId)
+			}
+		})
+	}
+}

@@ -39,8 +39,10 @@ type Completion struct {
 	Status      string
 	StatusCode  int
 	CompletedAt time.Time
-	ProjectId   *uuid.UUID
-	ResourceId  *string
+	// OrganizationId, ProjectId and ResourceId are written when set.
+	OrganizationId *uuid.UUID
+	ProjectId      *uuid.UUID
+	ResourceId     *string
 }
 
 // Insert stores the event and returns its ID. The user email is resolved in the same statement.
@@ -80,6 +82,9 @@ func Finalize(ctx context.Context, id uuid.UUID, completion Completion) error {
 		"status":       completion.Status,
 		"status_code":  completion.StatusCode,
 		"completed_at": completion.CompletedAt,
+	}
+	if completion.OrganizationId != nil {
+		values["organization_id"] = *completion.OrganizationId
 	}
 	if completion.ProjectId != nil {
 		values["project_id"] = *completion.ProjectId

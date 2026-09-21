@@ -35,7 +35,7 @@ func Module(s API) router.Module {
 		Name:  moduleName,
 		Mount: "/v1",
 		Routes: []router.Route{
-			router.Post("/invite-code", s.RegenerateInviteCode, jwtAuth),
+			router.Post("/invite-code", s.RegenerateInviteCode, jwtAuth).Audited("user.invite-code", "regenerate", ""),
 		},
 	}
 }

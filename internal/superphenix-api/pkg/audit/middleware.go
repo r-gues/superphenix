@@ -66,10 +66,15 @@ func newRecord(r *http.Request, store Store, declaration router.Audit) *Record {
 			StartedAt:      time.Now(),
 		},
 	}
-	if declaration.ResourceParam != "" {
-		if resourceId := chi.URLParam(r, declaration.ResourceParam); resourceId != "" {
-			record.event.ResourceId = &resourceId
-		}
+	resourceId := ""
+	switch {
+	case declaration.ResourceParam != "":
+		resourceId = chi.URLParam(r, declaration.ResourceParam)
+	case declaration.ResourceQuery != "":
+		resourceId = r.URL.Query().Get(declaration.ResourceQuery)
+	}
+	if resourceId != "" {
+		record.event.ResourceId = &resourceId
 	}
 	return record
 }

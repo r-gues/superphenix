@@ -96,6 +96,16 @@ func SetResource(ctx context.Context, resourceId string) {
 	}
 }
 
+// SetOrganization attaches the event to an organization the URL does not carry, such as the
+// one a request just created.
+func SetOrganization(ctx context.Context, organizationId uuid.UUID) {
+	if record := fromContext(ctx); record != nil && organizationId != uuid.Nil {
+		record.mu.Lock()
+		record.event.OrganizationId = &organizationId
+		record.mu.Unlock()
+	}
+}
+
 // SetProject reports the project of the action when the URL does not carry it.
 func SetProject(ctx context.Context, projectId uuid.UUID) {
 	if record := fromContext(ctx); record != nil && projectId != uuid.Nil {
@@ -123,11 +133,12 @@ func (record *Record) complete(ctx context.Context, statusCode int) {
 	var err error
 	if record.begun {
 		err = record.store.Finalize(ctx, record.id, auditEvent.Completion{
-			Status:      status,
-			StatusCode:  statusCode,
-			CompletedAt: now,
-			ProjectId:   record.event.ProjectId,
-			ResourceId:  record.event.ResourceId,
+			Status:         status,
+			StatusCode:     statusCode,
+			CompletedAt:    now,
+			OrganizationId: record.event.OrganizationId,
+			ProjectId:      record.event.ProjectId,
+			ResourceId:     record.event.ResourceId,
 		})
 	} else {
 		record.event.Status = status

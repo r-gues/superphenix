@@ -37,6 +37,9 @@ type Audit struct {
 	// ResourceParam is the URL param holding the resource ID. Empty when the ID
 	// is not in the URL, in which case the handler reports it.
 	ResourceParam string
+	// ResourceQuery is the query param holding the resource ID, for the routes
+	// that take it there.
+	ResourceQuery string
 	// Skip marks a non-GET route that changes nothing. SkipReason says why.
 	Skip       bool
 	SkipReason string
@@ -48,6 +51,12 @@ func (a Audit) EventType() string { return a.ResourceType + "." + a.Action }
 // Audited returns the route declared as an audited action.
 func (rt Route) Audited(resourceType, action, resourceParam string) Route {
 	rt.Audit = &Audit{ResourceType: resourceType, Action: action, ResourceParam: resourceParam}
+	return rt
+}
+
+// AuditedByQuery is Audited for a route whose resource ID is a query param.
+func (rt Route) AuditedByQuery(resourceType, action, resourceQuery string) Route {
+	rt.Audit = &Audit{ResourceType: resourceType, Action: action, ResourceQuery: resourceQuery}
 	return rt
 }
 

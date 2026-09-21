@@ -11,6 +11,7 @@ import (
 	"github.com/super-phenix/superphenix/internal/superphenix-api/internal/utils"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/api/publicHttp/gc"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/api/publicHttp/model"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/audit"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/config"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/services/controller"
 	"github.com/super-phenix/superphenix/pkg/utils/decoder"
@@ -61,6 +62,7 @@ func (h *Service) CreateOrUpdateProject(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var p model.APIProject
+	audit.SetResource(r.Context(), body.Id)
 	if body.Id != "" {
 		p, err = project.UpdateProject(r.Context(), orgaUuid, body.Id, body.Name)
 		if err != nil {
@@ -87,6 +89,7 @@ func (h *Service) CreateOrUpdateProject(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+		audit.SetResource(r.Context(), p.ID.String())
 	}
 
 	w.Header().Set("Content-Type", "application/json")
