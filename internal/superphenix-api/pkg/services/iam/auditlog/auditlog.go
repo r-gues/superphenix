@@ -41,9 +41,8 @@ type Event struct {
 	UserId         *uuid.UUID `json:"userId,omitempty"`
 	UserEmail      *string    `json:"userEmail,omitempty"`
 	AuthType       *string    `json:"authType,omitempty"`
-	// SourceIp is the client address reported by the proxies, RemoteAddr the peer that connected.
+	// SourceIp is the client address taken from the proxy headers, falling back to the peer address.
 	SourceIp    string     `json:"sourceIp"`
-	RemoteAddr  string     `json:"remoteAddr"`
 	Status      string     `json:"status" enums:"attempted,success,failed"`
 	StatusCode  *int       `json:"statusCode,omitempty"`
 	RequestId   string     `json:"requestId"`
@@ -91,7 +90,6 @@ func toEvent(event model.AuditEvent) Event {
 		UserEmail:      event.UserEmail,
 		AuthType:       event.AuthType,
 		SourceIp:       event.SourceIp,
-		RemoteAddr:     event.RemoteAddr,
 		Status:         event.Status,
 		StatusCode:     event.StatusCode,
 		RequestId:      event.RequestId,

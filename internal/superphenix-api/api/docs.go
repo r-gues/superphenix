@@ -8470,9 +8470,6 @@ const docTemplate = `{
                 "projectId": {
                     "type": "string"
                 },
-                "remoteAddr": {
-                    "type": "string"
-                },
                 "requestId": {
                     "type": "string"
                 },
@@ -8483,7 +8480,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sourceIp": {
-                    "description": "SourceIp is the client address reported by the proxies, RemoteAddr the peer that connected.",
+                    "description": "SourceIp is the client address taken from the proxy headers, falling back to the peer address.",
                     "type": "string"
                 },
                 "startedAt": {
