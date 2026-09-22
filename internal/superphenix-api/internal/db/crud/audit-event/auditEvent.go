@@ -163,12 +163,21 @@ func DeleteExpiredByOrganization(ctx context.Context, orgId uuid.UUID, cutoff ti
 	return res.RowsAffected, res.Error
 }
 
-// DeleteExpiredDefault does the same for every event not covered by an organization retention
-// override, including the events attached to no organization.
+// DeleteExpiredWithoutOrganization does the same for the events attached to no organization.
+func DeleteExpiredWithoutOrganization(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
+	res := db.Client.WithContext(ctx).Exec(`DELETE FROM audit_events WHERE id IN (
+		SELECT id FROM audit_events
+		WHERE organization_id IS NULL AND started_at < ?
+		ORDER BY started_at LIMIT ?)`, cutoff, limit)
+
+	return res.RowsAffected, res.Error
+}
+
+// DeleteExpiredDefault does the same for the organizations without a retention override.
 func DeleteExpiredDefault(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
 	res := db.Client.WithContext(ctx).Exec(`DELETE FROM audit_events WHERE id IN (
 		SELECT e.id FROM audit_events e
-		WHERE e.started_at < ? AND NOT EXISTS (
+		WHERE e.organization_id IS NOT NULL AND e.started_at < ? AND NOT EXISTS (
 			SELECT 1 FROM organizations o
 			WHERE o.id = e.organization_id AND o.audit_retention_days IS NOT NULL)
 		ORDER BY e.started_at LIMIT ?)`, cutoff, limit)

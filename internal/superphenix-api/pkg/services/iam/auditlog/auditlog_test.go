@@ -49,6 +49,7 @@ func testConfig() *config.Config {
 	cfg.AuditLog.Retention.DefaultDays = 90
 	cfg.AuditLog.Retention.MinDays = 7
 	cfg.AuditLog.Retention.MaxDays = 365
+	cfg.AuditLog.Retention.UserDays = 30
 	return &cfg
 }
 
@@ -59,6 +60,7 @@ func serve(s *Service, method, target, body string, userId *uuid.UUID) *httptest
 	root.Get("/v1/organization/{orgaId}/audit-log/retention", s.GetRetention)
 	root.Post("/v1/organization/{orgaId}/audit-log/retention", s.UpdateRetention)
 	root.Get("/v1/user/audit-log", s.ListUserEvents)
+	root.Get("/v1/user/audit-log/retention", s.GetUserRetention)
 
 	r := httptest.NewRequest(method, target, strings.NewReader(body))
 	if body != "" {
@@ -245,6 +247,30 @@ func TestRetention(t *testing.T) {
 			}
 
 			var got Retention
+			assert.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetUserRetention(t *testing.T) {
+	tests := []struct {
+		name     string
+		userDays int
+		want     UserRetention
+	}{
+		{name: "reports the configured value", userDays: 30, want: UserRetention{RetentionDays: 30}},
+		{name: "follows the config", userDays: 7, want: UserRetention{RetentionDays: 7}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			cfg.AuditLog.Retention.UserDays = tt.userDays
+			rr := serve(NewWithStore(cfg, &fakeStore{}), http.MethodGet, "/v1/user/audit-log/retention", "", nil)
+
+			assert.Equal(t, http.StatusOK, rr.Code)
+			var got UserRetention
 			assert.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
 			assert.Equal(t, tt.want, got)
 		})

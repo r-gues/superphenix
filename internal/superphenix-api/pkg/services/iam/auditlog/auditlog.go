@@ -68,6 +68,12 @@ type Retention struct {
 	MaxDays       int  `json:"maxDays"`
 }
 
+// UserRetention is the retention of the events attached to no organization, in days. It is set
+// platform-wide and cannot be changed by users.
+type UserRetention struct {
+	RetentionDays int `json:"retentionDays"`
+}
+
 // UpdateRetentionBody sets the retention. A null retentionDays goes back to the default.
 type UpdateRetentionBody struct {
 	RetentionDays *int `json:"retentionDays"`
@@ -304,6 +310,20 @@ func (s *Service) ListUserEvents(w http.ResponseWriter, r *http.Request) {
 	filter.NoOrganization = true
 
 	s.writeEvents(w, r, filter)
+}
+
+// GetUserRetention
+//
+//	@Summary		Get my audit log retention
+//	@Description	Get how long the caller's audit events outside organizations are kept. Platform-wide, read-only.
+//	@Tags			v1, audit-log
+//	@Produce		json
+//	@Success		200	{object}	UserRetention
+//	@Failure		401
+//	@Router			/v1/user/audit-log/retention [get]
+//	@Security		Bearer
+func (s *Service) GetUserRetention(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, r, UserRetention{RetentionDays: s.cfg.AuditLog.Retention.UserDays})
 }
 
 func (s *Service) retention(override *int) Retention {

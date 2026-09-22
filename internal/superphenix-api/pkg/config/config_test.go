@@ -21,6 +21,7 @@ func TestValidate(t *testing.T) {
 		c.AuditLog.Retention.DefaultDays = 90
 		c.AuditLog.Retention.MinDays = 1
 		c.AuditLog.Retention.MaxDays = 365
+		c.AuditLog.Retention.UserDays = 90
 		c.AuditLog.GarbageCollection.Enabled = true
 		c.AuditLog.GarbageCollection.Interval = time.Hour
 		c.AuditLog.GarbageCollection.Timeout = 10 * time.Minute
@@ -46,6 +47,7 @@ func TestValidate(t *testing.T) {
 		{name: "audit log disabled skips its rules", mutate: func(c *Config) { c.AuditLog = AuditLogConfig{} }, wantErr: ""},
 		{name: "audit retention min below one", mutate: func(c *Config) { c.AuditLog.Retention.MinDays = 0 }, wantErr: "minDays <= defaultDays <= maxDays"},
 		{name: "audit retention default above max", mutate: func(c *Config) { c.AuditLog.Retention.DefaultDays = 400 }, wantErr: "minDays <= defaultDays <= maxDays"},
+		{name: "audit user retention below one", mutate: func(c *Config) { c.AuditLog.Retention.UserDays = 0 }, wantErr: "userDays must be at least 1"},
 		{name: "audit gc without interval", mutate: func(c *Config) { c.AuditLog.GarbageCollection.Interval = 0 }, wantErr: "interval and timeout must be positive"},
 		{name: "audit gc batch too large", mutate: func(c *Config) { c.AuditLog.GarbageCollection.BatchSize = 50001 }, wantErr: "batchSize must be between"},
 		{name: "audit gc disabled skips its rules", mutate: func(c *Config) {

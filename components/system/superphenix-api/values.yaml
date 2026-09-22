@@ -86,6 +86,7 @@ serviceMonitor:
 #         defaultDays: 90                    # organizations without an override
 #         minDays: 1                         # bounds of the per-organization override
 #         maxDays: 365
+#         userDays: 90                       # events outside organizations (tokens, logins)
 #       garbageCollection:
 #         enabled: true                      # only one replica sweeps (advisory lock)
 #         interval: 1h

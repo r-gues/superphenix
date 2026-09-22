@@ -30,6 +30,7 @@ type API interface {
 	ListUserEvents(http.ResponseWriter, *http.Request)
 	GetRetention(http.ResponseWriter, *http.Request)
 	UpdateRetention(http.ResponseWriter, *http.Request)
+	GetUserRetention(http.ResponseWriter, *http.Request)
 }
 
 // Store is what the service reads and writes.
@@ -88,6 +89,7 @@ func Module(s API) router.Module {
 			router.Post("/organization/{orgaId}/audit-log/retention", s.UpdateRetention, jwtOrToken, orgaRead, auditWrite).
 				Audited("audit-log.retention", router.ActionUpdate, "orgaId"),
 			router.Get("/user/audit-log", s.ListUserEvents, jwtOrToken),
+			router.Get("/user/audit-log/retention", s.GetUserRetention, jwtOrToken),
 		},
 	}
 }

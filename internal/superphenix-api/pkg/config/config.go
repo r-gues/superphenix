@@ -311,6 +311,7 @@ auditLog:
     defaultDays: 90
     minDays: 1
     maxDays: 365
+    userDays: 90
   garbageCollection:
     enabled: true
     interval: 1h
@@ -428,6 +429,9 @@ type AuditLogConfig struct {
 		DefaultDays int `yaml:"defaultDays"`
 		MinDays     int `yaml:"minDays"`
 		MaxDays     int `yaml:"maxDays"`
+		// UserDays applies to the events attached to no organization. Platform-wide, not
+		// overridable.
+		UserDays int `yaml:"userDays"`
 	} `yaml:"retention"`
 	GarbageCollection struct {
 		Enabled   bool          `yaml:"enabled"`
@@ -446,6 +450,9 @@ func (a *AuditLogConfig) validate() []string {
 	retention := a.Retention
 	if retention.MinDays < 1 || retention.MinDays > retention.DefaultDays || retention.DefaultDays > retention.MaxDays {
 		errs = append(errs, "auditLog.retention must satisfy 1 <= minDays <= defaultDays <= maxDays")
+	}
+	if retention.UserDays < 1 {
+		errs = append(errs, "auditLog.retention.userDays must be at least 1")
 	}
 
 	gc := a.GarbageCollection

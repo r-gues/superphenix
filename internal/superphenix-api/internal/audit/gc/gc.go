@@ -28,6 +28,7 @@ type Store interface {
 	Overrides(ctx context.Context) ([]model.Organization, error)
 	DeleteByOrganization(ctx context.Context, orgaId uuid.UUID, cutoff time.Time, limit int) (int64, error)
 	DeleteDefault(ctx context.Context, cutoff time.Time, limit int) (int64, error)
+	DeleteWithoutOrganization(ctx context.Context, cutoff time.Time, limit int) (int64, error)
 }
 
 type dbStore struct{}
@@ -42,6 +43,10 @@ func (dbStore) DeleteByOrganization(ctx context.Context, orgaId uuid.UUID, cutof
 
 func (dbStore) DeleteDefault(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
 	return auditEvent.DeleteExpiredDefault(ctx, cutoff, limit)
+}
+
+func (dbStore) DeleteWithoutOrganization(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
+	return auditEvent.DeleteExpiredWithoutOrganization(ctx, cutoff, limit)
 }
 
 // Sweeper deletes the expired events. Lock returns acquired false when another replica sweeps.
@@ -99,8 +104,8 @@ func (s *Sweeper) sweepWithTimeout(ctx context.Context) {
 }
 
 // Sweep runs once and returns how many events it deleted. Organizations with a retention
-// override go first, then everything else, events without organization included, with the
-// default retention.
+// override go first, then the other organizations with the default retention, then the events
+// attached to no organization with the user retention.
 func (s *Sweeper) Sweep(ctx context.Context) (int64, error) {
 	release, acquired, err := s.Lock(ctx)
 	if err != nil {
@@ -136,6 +141,14 @@ func (s *Sweeper) Sweep(ctx context.Context) (int64, error) {
 	total += deleted
 	if err != nil {
 		return total, fmt.Errorf("delete events on default retention: %w", err)
+	}
+
+	deleted, err = s.deleteInBatches(ctx, func(limit int) (int64, error) {
+		return s.Store.DeleteWithoutOrganization(ctx, s.cutoff(retention.UserDays), limit)
+	})
+	total += deleted
+	if err != nil {
+		return total, fmt.Errorf("delete events without organization: %w", err)
 	}
 
 	return total, nil

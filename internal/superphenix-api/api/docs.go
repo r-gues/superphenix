@@ -1772,6 +1772,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/user/audit-log/retention": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get how long the caller's audit events outside organizations are kept. Platform-wide, read-only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "audit-log"
+                ],
+                "summary": "Get my audit log retention",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auditlog.UserRetention"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
         "/v1/whoami": {
             "get": {
                 "security": [
@@ -8520,6 +8549,14 @@ const docTemplate = `{
             }
         },
         "auditlog.UpdateRetentionBody": {
+            "type": "object",
+            "properties": {
+                "retentionDays": {
+                    "type": "integer"
+                }
+            }
+        },
+        "auditlog.UserRetention": {
             "type": "object",
             "properties": {
                 "retentionDays": {

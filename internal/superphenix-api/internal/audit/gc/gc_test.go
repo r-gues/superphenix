@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// noOrg keys the events without organization in the fake store, uuid.Nil keys the default pass.
+var noOrg = uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
+
 type fakeStore struct {
 	overrides    []model.Organization
 	overridesErr error
@@ -45,6 +48,10 @@ func (s *fakeStore) DeleteByOrganization(_ context.Context, orgaId uuid.UUID, cu
 
 func (s *fakeStore) DeleteDefault(_ context.Context, cutoff time.Time, limit int) (int64, error) {
 	return s.delete(uuid.Nil, cutoff, limit)
+}
+
+func (s *fakeStore) DeleteWithoutOrganization(_ context.Context, cutoff time.Time, limit int) (int64, error) {
+	return s.delete(noOrg, cutoff, limit)
 }
 
 func TestSweep(t *testing.T) {
@@ -86,8 +93,17 @@ func TestSweep(t *testing.T) {
 			lockAcquired: true,
 			batchSize:    100,
 			want:         10,
-			wantBatches:  1,
-			wantCutoffs:  map[uuid.UUID]time.Time{uuid.Nil: now.Add(-90 * day)},
+			wantBatches:  2,
+			wantCutoffs:  map[uuid.UUID]time.Time{uuid.Nil: now.Add(-90 * day), noOrg: now.Add(-30 * day)},
+		},
+		{
+			name:         "events without organization follow the user retention",
+			store:        &fakeStore{remaining: map[uuid.UUID]int64{uuid.Nil: 2, noOrg: 3}},
+			lockAcquired: true,
+			batchSize:    100,
+			want:         5,
+			wantBatches:  2,
+			wantCutoffs:  map[uuid.UUID]time.Time{uuid.Nil: now.Add(-90 * day), noOrg: now.Add(-30 * day)},
 		},
 		{
 			name:         "batches until a short one",
@@ -95,8 +111,8 @@ func TestSweep(t *testing.T) {
 			lockAcquired: true,
 			batchSize:    100,
 			want:         250,
-			wantBatches:  3,
-			wantCutoffs:  map[uuid.UUID]time.Time{uuid.Nil: now.Add(-90 * day)},
+			wantBatches:  4,
+			wantCutoffs:  map[uuid.UUID]time.Time{uuid.Nil: now.Add(-90 * day), noOrg: now.Add(-30 * day)},
 		},
 		{
 			name: "overrides are clamped to the bounds",
@@ -107,11 +123,12 @@ func TestSweep(t *testing.T) {
 			lockAcquired: true,
 			batchSize:    100,
 			want:         13,
-			wantBatches:  3,
+			wantBatches:  4,
 			wantCutoffs: map[uuid.UUID]time.Time{
 				shortOrg: now.Add(-7 * day),
 				longOrg:  now.Add(-365 * day),
 				uuid.Nil: now.Add(-90 * day),
+				noOrg:    now.Add(-30 * day),
 			},
 		},
 		{
@@ -154,6 +171,7 @@ func TestSweep(t *testing.T) {
 			cfg.Retention.DefaultDays = 90
 			cfg.Retention.MinDays = 7
 			cfg.Retention.MaxDays = 365
+			cfg.Retention.UserDays = 30
 			cfg.GarbageCollection.BatchSize = tt.batchSize
 
 			sweeper := &Sweeper{

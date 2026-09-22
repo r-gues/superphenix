@@ -240,7 +240,13 @@ func TestDeleteExpired(t *testing.T) {
 		{
 			name:    "default batch skips organizations with an override",
 			run:     func() (int64, error) { return DeleteExpiredDefault(context.Background(), cutoff, 100) },
-			wantSQL: `DELETE FROM audit_events WHERE id IN .*NOT EXISTS .*audit_retention_days IS NOT NULL.*LIMIT \$2`,
+			wantSQL: `DELETE FROM audit_events WHERE id IN .*organization_id IS NOT NULL.*NOT EXISTS .*audit_retention_days IS NOT NULL.*LIMIT \$2`,
+			want:    100,
+		},
+		{
+			name:    "batch without organization",
+			run:     func() (int64, error) { return DeleteExpiredWithoutOrganization(context.Background(), cutoff, 100) },
+			wantSQL: `DELETE FROM audit_events WHERE id IN .*organization_id IS NULL AND started_at < \$1.*LIMIT \$2`,
 			want:    100,
 		},
 		{
