@@ -1,6 +1,6 @@
 // Package advisorylock serialises background work across the API replicas with Postgres
-// advisory locks. There is no leader election, so a periodic job takes its lock on every tick
-// and skips the tick when another replica holds it.
+// advisory locks. A periodic job takes its lock on every tick and skips the tick when another
+// replica holds it.
 package advisorylock
 
 import (
@@ -14,9 +14,8 @@ import (
 // releaseTimeout bounds the unlock, which runs on a fresh context.
 const releaseTimeout = 5 * time.Second
 
-// TryLock takes the advisory lock on a dedicated connection, since the lock is session-scoped
-// and must be released on the connection that took it. acquired is false when another replica
-// holds the lock. If this replica crashes, its session ends and Postgres releases the lock.
+// TryLock takes the advisory lock on a dedicated connection and releases it on that same
+// connection. acquired is false when another replica holds the lock.
 func TryLock(ctx context.Context, db *gorm.DB, id int64) (release func(), acquired bool, err error) {
 	sqlDB, err := db.DB()
 	if err != nil {

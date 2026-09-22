@@ -4,6 +4,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -29,11 +30,21 @@ const (
 	ActionDelete = "delete"
 )
 
+// Resource is an audited resource: Name is the identifier stored with the events,
+// Label how the console shows it.
+type Resource struct {
+	Name  string
+	Label string
+}
+
 // Audit declares how a route shows up in the audit log. The event type is
-// ResourceType + "." + Action.
+// Resource.Name + "." + Action.
 type Audit struct {
-	ResourceType string
-	Action       string
+	Resource Resource
+	Action   string
+	// ReportsOrganization marks a route without {orgaId} whose handler sets the
+	// organization. Its events belong to the organization log.
+	ReportsOrganization bool
 	// ResourceParam is the URL param holding the resource ID. Empty when the ID
 	// is not in the URL, in which case the handler reports it.
 	ResourceParam string
@@ -46,17 +57,27 @@ type Audit struct {
 }
 
 // EventType is the name stored with the event, e.g. "instance.create".
-func (a Audit) EventType() string { return a.ResourceType + "." + a.Action }
+func (a Audit) EventType() string { return a.Resource.Name + "." + a.Action }
 
 // Audited returns the route declared as an audited action.
-func (rt Route) Audited(resourceType, action, resourceParam string) Route {
-	rt.Audit = &Audit{ResourceType: resourceType, Action: action, ResourceParam: resourceParam}
+func (rt Route) Audited(resource Resource, action, resourceParam string) Route {
+	rt.Audit = &Audit{Resource: resource, Action: action, ResourceParam: resourceParam}
 	return rt
 }
 
 // AuditedByQuery is Audited for a route whose resource ID is a query param.
-func (rt Route) AuditedByQuery(resourceType, action, resourceQuery string) Route {
-	rt.Audit = &Audit{ResourceType: resourceType, Action: action, ResourceQuery: resourceQuery}
+func (rt Route) AuditedByQuery(resource Resource, action, resourceQuery string) Route {
+	rt.Audit = &Audit{Resource: resource, Action: action, ResourceQuery: resourceQuery}
+	return rt
+}
+
+// ReportingOrganization sets Audit.ReportsOrganization on an audited route.
+func (rt Route) ReportingOrganization() Route {
+	if rt.Audit == nil {
+		log.Warn().Str("pattern", rt.Pattern).Msg("ReportingOrganization on a route that is not audited")
+		return rt
+	}
+	rt.Audit.ReportsOrganization = true
 	return rt
 }
 
@@ -71,6 +92,12 @@ type RouteInfo struct {
 	Method  string
 	Pattern string
 	Audit   *Audit
+}
+
+// OrganizationScoped tells whether the events of the route belong to an
+// organization log.
+func (info RouteInfo) OrganizationScoped() bool {
+	return strings.Contains(info.Pattern, "{orgaId}") || (info.Audit != nil && info.Audit.ReportsOrganization)
 }
 
 // methodAny is the sentinel Method for a Route that handles every HTTP verb. It
@@ -175,7 +202,7 @@ func (r *Registry) Reset() *Registry {
 
 // SetAuditor sets the factory building the audit middleware of each audited
 // route. Build puts that middleware first in the route chain, ahead of
-// authentication, so it sees the final status whatever rejects the request.
+// authentication.
 func (r *Registry) SetAuditor(auditor func(Audit) Middleware) *Registry {
 	r.auditor = auditor
 	return r
@@ -415,8 +442,7 @@ func (r *Registry) flatten(prefix string, shared []Middleware, routes []Route, g
 		if ov, ok := r.routeOverrides[key]; ok {
 			// An override replaces the whole post-global chain: shared middlewares
 			// are intentionally not re-applied.
-			// The original declaration is kept when the override has
-			// none, so an override cannot silently drop auditing.
+			// The original declaration is kept when the override has none.
 			consumed[key] = true
 			audit := ov.Audit
 			if audit == nil {

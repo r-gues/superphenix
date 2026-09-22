@@ -69,8 +69,7 @@ func New(cfg config.AuditLogConfig) *Sweeper {
 	}
 }
 
-// Run sweeps on a timer until ctx is cancelled. A sweep interrupted by a shutdown or a timeout
-// simply resumes at the next tick: it only ever deletes what is expired.
+// Run sweeps on a timer until ctx is cancelled. An interrupted sweep resumes at the next tick.
 func (s *Sweeper) Run(ctx context.Context) {
 	opts := s.Config.GarbageCollection
 	log.Info().Msgf("Initialize audit log garbage collection - running every : %s and timeout after %s",
@@ -124,7 +123,7 @@ func (s *Sweeper) Sweep(ctx context.Context) (int64, error) {
 	var total int64
 	retention := s.Config.Retention
 	for _, orga := range overrides {
-		// The bounds may have moved since the override was saved.
+		// Clamp to the current bounds.
 		days := min(max(*orga.AuditRetentionDays, retention.MinDays), retention.MaxDays)
 		deleted, err := s.deleteInBatches(ctx, func(limit int) (int64, error) {
 			return s.Store.DeleteByOrganization(ctx, orga.ID, s.cutoff(days), limit)

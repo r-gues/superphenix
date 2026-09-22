@@ -130,7 +130,8 @@ func TestEveryWriteRouteDeclaresAudit(t *testing.T) {
 				assert.NotEmpty(t, tt.audit.SkipReason, "NotAudited needs a reason")
 				return
 			}
-			assert.NotEmpty(t, tt.audit.ResourceType)
+			assert.NotEmpty(t, tt.audit.Resource.Name)
+			assert.NotEmpty(t, tt.audit.Resource.Label, "Resource needs a Label")
 			assert.NotEmpty(t, tt.audit.Action)
 		})
 	}

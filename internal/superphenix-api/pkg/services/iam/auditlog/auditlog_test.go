@@ -13,6 +13,7 @@ import (
 	auditEvent "github.com/super-phenix/superphenix/internal/superphenix-api/internal/db/crud/audit-event"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/internal/db/model"
 	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/config"
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/router"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -53,13 +54,36 @@ func testConfig() *config.Config {
 	return &cfg
 }
 
+// testDeclared covers both logs, a duplicate declaration, an undeclared read and a skipped write.
+func testDeclared() []router.RouteInfo {
+	disk := router.Resource{Name: "disk", Label: "Disk"}
+	return []router.RouteInfo{
+		{Method: http.MethodPost, Pattern: "/v1/organization/{orgaId}/disk", Audit: &router.Audit{Resource: disk, Action: router.ActionCreate}},
+		{Method: http.MethodPut, Pattern: "/v1/organization/{orgaId}/disk/{id}", Audit: &router.Audit{Resource: disk, Action: router.ActionCreate}},
+		{
+			Method: http.MethodPost, Pattern: "/v1/organization",
+			Audit: &router.Audit{Resource: router.Resource{Name: "organization", Label: "Organization"}, Action: router.ActionCreate, ReportsOrganization: true},
+		},
+		{Method: http.MethodPost, Pattern: "/v1/api-token", Audit: &router.Audit{Resource: router.Resource{Name: "api-token", Label: "API Token"}, Action: router.ActionCreate}},
+		{Method: http.MethodGet, Pattern: "/v1/session/token", Audit: &router.Audit{Resource: router.Resource{Name: "session", Label: "Session"}, Action: "login"}},
+		{Method: http.MethodGet, Pattern: "/v1/organization/{orgaId}"},
+		{Method: http.MethodPost, Pattern: "/v1/organization/{orgaId}/search", Audit: &router.Audit{Skip: true, SkipReason: "read-only"}},
+	}
+}
+
+func testService(store Store) *Service {
+	return NewWithDeclared(testConfig(), store, testDeclared)
+}
+
 // serve routes the request through chi so the URL params resolve, as the given user.
 func serve(s *Service, method, target, body string, userId *uuid.UUID) *httptest.ResponseRecorder {
 	root := chi.NewRouter()
 	root.Get("/v1/organization/{orgaId}/audit-log", s.ListOrganizationEvents)
+	root.Get("/v1/organization/{orgaId}/audit-log/event-types", s.ListOrganizationEventTypes)
 	root.Get("/v1/organization/{orgaId}/audit-log/retention", s.GetRetention)
 	root.Post("/v1/organization/{orgaId}/audit-log/retention", s.UpdateRetention)
 	root.Get("/v1/user/audit-log", s.ListUserEvents)
+	root.Get("/v1/user/audit-log/event-types", s.ListUserEventTypes)
 	root.Get("/v1/user/audit-log/retention", s.GetUserRetention)
 
 	r := httptest.NewRequest(method, target, strings.NewReader(body))
@@ -116,6 +140,38 @@ func TestListOrganizationEvents(t *testing.T) {
 				assert.Equal(t, 20, filter.Offset)
 			},
 		},
+		{
+			name:       "other keeps the types no longer declared",
+			target:     base + "?eventType=other",
+			wantStatus: http.StatusOK,
+			check: func(t *testing.T, filter auditEvent.Filter) {
+				assert.Empty(t, filter.EventTypes)
+				assert.Equal(t, []string{"disk.create", "organization.create"}, filter.OtherThan)
+			},
+		},
+		{
+			name:       "other next to a declared type",
+			target:     base + "?eventType=disk.create&eventType=other",
+			wantStatus: http.StatusOK,
+			check: func(t *testing.T, filter auditEvent.Filter) {
+				assert.Equal(t, []string{"disk.create"}, filter.EventTypes)
+				assert.Equal(t, []string{"disk.create", "organization.create"}, filter.OtherThan)
+			},
+		},
+		{
+			name:       "no other, no exclusion",
+			target:     base + "?eventType=disk.create",
+			wantStatus: http.StatusOK,
+			check: func(t *testing.T, filter auditEvent.Filter) {
+				assert.Equal(t, []string{"disk.create"}, filter.EventTypes)
+				assert.Nil(t, filter.OtherThan)
+			},
+		},
+		{
+			name:       "other counts against the limit",
+			target:     base + "?" + strings.Repeat("eventType=disk.create&", maxEventTypes) + "eventType=other",
+			wantStatus: http.StatusBadRequest,
+		},
 		{name: "organization is not a uuid", target: "/v1/organization/nope/audit-log", wantStatus: http.StatusBadRequest},
 		{name: "unknown status", target: base + "?status=done", wantStatus: http.StatusBadRequest},
 		{name: "limit above the maximum", target: base + "?limit=101", wantStatus: http.StatusBadRequest},
@@ -131,7 +187,7 @@ func TestListOrganizationEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &fakeStore{events: []model.AuditEvent{{EventType: "disk.create"}}, total: 42, err: tt.storeErr}
-			rr := serve(NewWithStore(testConfig(), store), http.MethodGet, tt.target, "", nil)
+			rr := serve(testService(store), http.MethodGet, tt.target, "", nil)
 
 			assert.Equal(t, tt.wantStatus, rr.Code)
 			if tt.wantStatus != http.StatusOK {
@@ -165,6 +221,7 @@ func TestListUserEvents(t *testing.T) {
 			userId:     &userId,
 			wantStatus: http.StatusOK,
 		},
+		{name: "other resolves against the user log", target: "/v1/user/audit-log?eventType=other", userId: &userId, wantStatus: http.StatusOK},
 		{name: "no user in context", target: "/v1/user/audit-log", wantStatus: http.StatusUnauthorized},
 		{name: "invalid filter", target: "/v1/user/audit-log?limit=abc", userId: &userId, wantStatus: http.StatusBadRequest},
 	}
@@ -172,11 +229,14 @@ func TestListUserEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &fakeStore{}
-			rr := serve(NewWithStore(testConfig(), store), http.MethodGet, tt.target, "", tt.userId)
+			rr := serve(testService(store), http.MethodGet, tt.target, "", tt.userId)
 
 			assert.Equal(t, tt.wantStatus, rr.Code)
 			if tt.wantStatus != http.StatusOK {
 				return
+			}
+			if strings.Contains(tt.target, "eventType=other") {
+				assert.Equal(t, []string{"api-token.create", "session.login"}, store.gotFilter.OtherThan)
 			}
 			assert.Equal(t, &userId, store.gotFilter.UserId)
 			assert.True(t, store.gotFilter.NoOrganization)
@@ -275,4 +335,54 @@ func TestGetUserRetention(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestListEventTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		target     string
+		wantStatus int
+		want       []EventType
+	}{
+		{
+			name:       "organization log, sorted by resource then action, deduplicated",
+			target:     "/v1/organization/" + uuid.NewString() + "/audit-log/event-types",
+			wantStatus: http.StatusOK,
+			want: []EventType{
+				{EventType: "disk.create", ResourceType: "disk", ResourceLabel: "Disk", Action: "create"},
+				{EventType: "organization.create", ResourceType: "organization", ResourceLabel: "Organization", Action: "create"},
+			},
+		},
+		{
+			name:       "user log",
+			target:     "/v1/user/audit-log/event-types",
+			wantStatus: http.StatusOK,
+			want: []EventType{
+				{EventType: "api-token.create", ResourceType: "api-token", ResourceLabel: "API Token", Action: "create"},
+				{EventType: "session.login", ResourceType: "session", ResourceLabel: "Session", Action: "login"},
+			},
+		},
+		{name: "organization is not a uuid", target: "/v1/organization/nope/audit-log/event-types", wantStatus: http.StatusBadRequest},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rr := serve(testService(&fakeStore{}), http.MethodGet, tt.target, "", nil)
+
+			assert.Equal(t, tt.wantStatus, rr.Code)
+			if tt.wantStatus != http.StatusOK {
+				return
+			}
+			var got EventTypesResponse
+			assert.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+			assert.Equal(t, tt.want, got.Items)
+		})
+	}
+}
+
+func TestEventTypesWithoutDeclaration(t *testing.T) {
+	rr := serve(NewWithStore(testConfig(), &fakeStore{}), http.MethodGet, "/v1/user/audit-log/event-types", "", nil)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.JSONEq(t, `{"items": []}`, rr.Body.String())
 }

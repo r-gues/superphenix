@@ -199,9 +199,10 @@ func parseFilter(r *http.Request) (auditEvent.Filter, error) {
 	return filter, errors.Join(errs...)
 }
 
-func (s *Service) writeEvents(w http.ResponseWriter, r *http.Request, filter auditEvent.Filter) {
+func (s *Service) writeEvents(w http.ResponseWriter, r *http.Request, filter auditEvent.Filter, c *catalogue) {
 	log := logger.GetLogger(r.Context())
 
+	filter.EventTypes, filter.OtherThan = c.resolveOther(filter.EventTypes)
 	events, total, err := s.store.List(r.Context(), filter)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list audit events")
@@ -234,7 +235,7 @@ func writeJSON(w http.ResponseWriter, r *http.Request, payload any) {
 //	@Tags			v1, audit-log
 //	@Produce		json
 //	@Param			orgaId			path		string		true	"Organization ID"
-//	@Param			eventType		query		[]string	false	"Event types, e.g. instance.create"	collectionFormat(multi)
+//	@Param			eventType		query		[]string	false	"Event types, e.g. instance.create; `other` matches the types no longer declared"	collectionFormat(multi)
 //	@Param			resourceType	query		string		false	"Resource type"
 //	@Param			resourceId		query		string		false	"Resource ID"
 //	@Param			userId			query		string		false	"Initiator user ID"
@@ -266,7 +267,7 @@ func (s *Service) ListOrganizationEvents(w http.ResponseWriter, r *http.Request)
 	}
 	filter.OrganizationId = &orgaUuid
 
-	s.writeEvents(w, r, filter)
+	s.writeEvents(w, r, filter, s.catalogue(true))
 }
 
 // ListUserEvents
@@ -275,7 +276,7 @@ func (s *Service) ListOrganizationEvents(w http.ResponseWriter, r *http.Request)
 //	@Description	List the caller's own audit events attached to no organization (API tokens, sessions).
 //	@Tags			v1, audit-log
 //	@Produce		json
-//	@Param			eventType		query		[]string	false	"Event types, e.g. api-token.create"	collectionFormat(multi)
+//	@Param			eventType		query		[]string	false	"Event types, e.g. api-token.create; `other` matches the types no longer declared"	collectionFormat(multi)
 //	@Param			resourceType	query		string		false	"Resource type"
 //	@Param			resourceId		query		string		false	"Resource ID"
 //	@Param			status			query		string		false	"Status"	Enums(attempted, success, failed)
@@ -307,7 +308,42 @@ func (s *Service) ListUserEvents(w http.ResponseWriter, r *http.Request) {
 	filter.ProjectId = nil
 	filter.NoOrganization = true
 
-	s.writeEvents(w, r, filter)
+	s.writeEvents(w, r, filter, s.catalogue(false))
+}
+
+// ListOrganizationEventTypes
+//
+//	@Summary		List audit event types
+//	@Description	List the event types that can appear in the audit log of an organization, with their resource label and action. Static per API version.
+//	@Tags			v1, audit-log
+//	@Produce		json
+//	@Param			orgaId	path		string	true	"Organization ID"
+//	@Success		200		{object}	EventTypesResponse
+//	@Failure		400
+//	@Failure		401
+//	@Failure		403
+//	@Router			/v1/organization/{orgaId}/audit-log/event-types [get]
+//	@Security		Bearer[OrganizationRead, OrganizationAuditLogRead]
+func (s *Service) ListOrganizationEventTypes(w http.ResponseWriter, r *http.Request) {
+	if _, err := uuid.Parse(chi.URLParam(r, "orgaId")); err != nil {
+		httpError.Http(w, r, http.StatusBadRequest).Msg("orgaId must be a UUID")
+		return
+	}
+	writeJSON(w, r, EventTypesResponse{Items: s.catalogue(true).items})
+}
+
+// ListUserEventTypes
+//
+//	@Summary		List my audit event types
+//	@Description	List the event types that can appear in the caller's own audit log, with their resource label and action. Static per API version.
+//	@Tags			v1, audit-log
+//	@Produce		json
+//	@Success		200	{object}	EventTypesResponse
+//	@Failure		401
+//	@Router			/v1/user/audit-log/event-types [get]
+//	@Security		Bearer
+func (s *Service) ListUserEventTypes(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, r, EventTypesResponse{Items: s.catalogue(false).items})
 }
 
 // GetUserRetention
@@ -334,7 +370,7 @@ func (s *Service) retention(override *int) Retention {
 		MaxDays:       bounds.MaxDays,
 	}
 	if override != nil {
-		// Same clamping as the sweep, in case the bounds moved since the override was set.
+		// Clamp to the current bounds.
 		retention.RetentionDays = min(max(*override, bounds.MinDays), bounds.MaxDays)
 		retention.IsDefault = false
 	}

@@ -98,8 +98,7 @@ func SetResource(ctx context.Context, resourceId string) {
 	}
 }
 
-// ClearResource drops the resource reported by SetResource, for a creation that was rolled
-// back: the event must not point at something that never existed.
+// ClearResource drops the resource reported by SetResource, for a creation that was rolled back.
 func ClearResource(ctx context.Context) {
 	if record := fromContext(ctx); record != nil {
 		record.mu.Lock()

@@ -3,6 +3,8 @@ package model
 import (
 	"time"
 
+	"github.com/super-phenix/superphenix/internal/superphenix-api/pkg/router"
+
 	pwPermission "github.com/super-phenix/superphenix/pkg/permify-wrapper/pkg/base/v1/permission"
 
 	"github.com/google/uuid"
@@ -10,37 +12,38 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	ProductTypeInstance      = "instance"
-	ProductTypeVPC           = "vpc"
-	ProductTypeSubnet        = "subnet"
-	ProductTypeEIP           = "eip"
-	ProductTypeDisk          = "disk"
-	ProductTypeSnapshot      = "snapshot"
-	ProductTypeSSH           = "ssh"
-	ProductTypeVmSnapshot    = "vmSnapshot"
-	ProductTypeLoadBalancer  = "loadBalancer"
-	ProductTypeSecurityGroup = "securityGroup"
-	ProductTypeKaaS          = "kaas"
-	ProductTypeBaaS          = "baas"
-	ProductTypeBucket        = "bucket"
+// Product types as audited resources; Name is the product_types key.
+var (
+	ProductTypeInstance      = router.Resource{Name: "instance", Label: "Instance"}
+	ProductTypeVmSnapshot    = router.Resource{Name: "vmSnapshot", Label: "Instance Snapshot"}
+	ProductTypeDisk          = router.Resource{Name: "disk", Label: "Disk"}
+	ProductTypeSnapshot      = router.Resource{Name: "snapshot", Label: "Snapshot"}
+	ProductTypeBaaS          = router.Resource{Name: "baas", Label: "Backup"}
+	ProductTypeBucket        = router.Resource{Name: "bucket", Label: "Object Storage"}
+	ProductTypeVPC           = router.Resource{Name: "vpc", Label: "VPC"}
+	ProductTypeSubnet        = router.Resource{Name: "subnet", Label: "Subnet"}
+	ProductTypeEIP           = router.Resource{Name: "eip", Label: "Elastic IP"}
+	ProductTypeLoadBalancer  = router.Resource{Name: "loadBalancer", Label: "Load Balancer"}
+	ProductTypeSecurityGroup = router.Resource{Name: "securityGroup", Label: "Security Group"}
+	ProductTypeKaaS          = router.Resource{Name: "kaas", Label: "Kubernetes"}
+	ProductTypeSSH           = router.Resource{Name: "ssh", Label: "SSH Keys"}
 )
 
 // ProductTypeReadPermission maps each product type to the permission that gates reading it.
 var ProductTypeReadPermission = map[string]string{
-	ProductTypeInstance:      pwPermission.ProjectInstanceRead,
-	ProductTypeVPC:           pwPermission.ProjectVPCRead,
-	ProductTypeSubnet:        pwPermission.ProjectSubnetRead,
-	ProductTypeEIP:           pwPermission.ProjectEipRead,
-	ProductTypeDisk:          pwPermission.ProjectDiskRead,
-	ProductTypeSnapshot:      pwPermission.ProjectSnapshotRead,
-	ProductTypeSSH:           pwPermission.ProjectSSHRead,
-	ProductTypeVmSnapshot:    pwPermission.ProjectSnapshotRead,
-	ProductTypeLoadBalancer:  pwPermission.ProjectLoadBalancerRead,
-	ProductTypeSecurityGroup: pwPermission.ProjectSecurityGroupRead,
-	ProductTypeKaaS:          pwPermission.ProjectKaaSRead,
-	ProductTypeBaaS:          pwPermission.ProjectBaaSRead,
-	ProductTypeBucket:        pwPermission.ProjectBucketRead,
+	ProductTypeInstance.Name:      pwPermission.ProjectInstanceRead,
+	ProductTypeVPC.Name:           pwPermission.ProjectVPCRead,
+	ProductTypeSubnet.Name:        pwPermission.ProjectSubnetRead,
+	ProductTypeEIP.Name:           pwPermission.ProjectEipRead,
+	ProductTypeDisk.Name:          pwPermission.ProjectDiskRead,
+	ProductTypeSnapshot.Name:      pwPermission.ProjectSnapshotRead,
+	ProductTypeSSH.Name:           pwPermission.ProjectSSHRead,
+	ProductTypeVmSnapshot.Name:    pwPermission.ProjectSnapshotRead,
+	ProductTypeLoadBalancer.Name:  pwPermission.ProjectLoadBalancerRead,
+	ProductTypeSecurityGroup.Name: pwPermission.ProjectSecurityGroupRead,
+	ProductTypeKaaS.Name:          pwPermission.ProjectKaaSRead,
+	ProductTypeBaaS.Name:          pwPermission.ProjectBaaSRead,
+	ProductTypeBucket.Name:        pwPermission.ProjectBucketRead,
 }
 
 type Model struct {
@@ -175,8 +178,7 @@ const (
 )
 
 // AuditEvent is one audited action. Rows are append-only and hard deleted by the retention
-// sweep, so it carries no UpdatedAt or DeletedAt. OrganizationId and ProjectId have no foreign
-// key: events outlive the entities they point to.
+// sweep. OrganizationId and ProjectId have no foreign key.
 type AuditEvent struct {
 	ID uuid.UUID `gorm:"primaryKey;type:uuid;default:gen_random_uuid();not null;index:idx_audit_events_org_started,priority:3,sort:desc"`
 

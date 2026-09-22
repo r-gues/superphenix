@@ -16,7 +16,7 @@ import (
 const moduleName = "iam"
 
 // auditResource is the resource type of the audit events of this module.
-const auditResource = "iam.member"
+var auditResource = router.Resource{Name: "iam.member", Label: "IAM Member"}
 
 // API is the overridable seam for the IAM invite endpoints; the methods are the HTTP handlers.
 type API interface {

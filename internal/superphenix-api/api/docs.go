@@ -596,7 +596,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "multi",
-                        "description": "Event types, e.g. instance.create",
+                        "description": "Event types, e.g. instance.create; ` + "`" + `other` + "`" + ` matches the types no longer declared",
                         "name": "eventType",
                         "in": "query"
                     },
@@ -686,6 +686,53 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/organization/{orgaId}/audit-log/event-types": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": [
+                            "OrganizationRead",
+                            "OrganizationAuditLogRead"
+                        ]
+                    }
+                ],
+                "description": "List the event types that can appear in the audit log of an organization, with their resource label and action. Static per API version.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "audit-log"
+                ],
+                "summary": "List audit event types",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgaId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auditlog.EventTypesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
                     }
                 }
             }
@@ -1699,7 +1746,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "multi",
-                        "description": "Event types, e.g. api-token.create",
+                        "description": "Event types, e.g. api-token.create; ` + "`" + `other` + "`" + ` matches the types no longer declared",
                         "name": "eventType",
                         "in": "query"
                     },
@@ -1768,6 +1815,35 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/v1/user/audit-log/event-types": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "List the event types that can appear in the caller's own audit log, with their resource label and action. Static per API version.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "v1",
+                    "audit-log"
+                ],
+                "summary": "List my audit event types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auditlog.EventTypesResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     }
                 }
             }
@@ -8502,6 +8578,38 @@ const docTemplate = `{
                 },
                 "userId": {
                     "type": "string"
+                }
+            }
+        },
+        "auditlog.EventType": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "e.g. ` + "`" + `stop-force` + "`" + `",
+                    "type": "string"
+                },
+                "eventType": {
+                    "description": "e.g. ` + "`" + `instance.stop-force` + "`" + `",
+                    "type": "string"
+                },
+                "resourceLabel": {
+                    "description": "e.g. ` + "`" + `Instance` + "`" + `",
+                    "type": "string"
+                },
+                "resourceType": {
+                    "description": "e.g. ` + "`" + `instance` + "`" + `",
+                    "type": "string"
+                }
+            }
+        },
+        "auditlog.EventTypesResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/auditlog.EventType"
+                    }
                 }
             }
         },

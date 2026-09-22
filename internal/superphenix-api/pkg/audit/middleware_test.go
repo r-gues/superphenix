@@ -152,7 +152,7 @@ func TestMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &fakeStore{insertErr: tt.insertErr}
-			declaration := router.Audit{ResourceType: "disk", Action: router.ActionDelete, ResourceParam: "effectiveId"}
+			declaration := router.Audit{Resource: router.Resource{Name: "disk"}, Action: router.ActionDelete, ResourceParam: "effectiveId"}
 
 			root := chi.NewRouter()
 			chain := append([]router.Middleware{Middleware(store)(declaration)}, tt.chain...)
@@ -240,19 +240,19 @@ func TestMiddlewareResolvesResourceId(t *testing.T) {
 	}{
 		{
 			name:        "from the url param",
-			declaration: router.Audit{ResourceType: "iam.group", Action: "duplicate", ResourceParam: "groupId"},
+			declaration: router.Audit{Resource: router.Resource{Name: "iam.group"}, Action: "duplicate", ResourceParam: "groupId"},
 			target:      "/group/g-1",
 			want:        &fromParam,
 		},
 		{
 			name:        "from the query param",
-			declaration: router.Audit{ResourceType: "iam.group", Action: router.ActionDelete, ResourceQuery: "groupId"},
+			declaration: router.Audit{Resource: router.Resource{Name: "iam.group"}, Action: router.ActionDelete, ResourceQuery: "groupId"},
 			target:      "/group?groupId=g-2",
 			want:        &fromQuery,
 		},
 		{
 			name:        "absent when nothing carries it",
-			declaration: router.Audit{ResourceType: "iam.group", Action: router.ActionDelete, ResourceQuery: "groupId"},
+			declaration: router.Audit{Resource: router.Resource{Name: "iam.group"}, Action: router.ActionDelete, ResourceQuery: "groupId"},
 			target:      "/group",
 		},
 	}

@@ -301,7 +301,6 @@ func parseReturnUrl(ctx context.Context, returnTo string) string {
 }
 
 func contactAdminResponse(w http.ResponseWriter, r *http.Request) {
-	// The refusal is a redirect, which would otherwise read as a successful login.
 	audit.Fail(r.Context())
 	http.Redirect(w, r, fmt.Sprintf("%snot_active=%t", config.Global.Session.DefaultReturnUrl+"?", true), http.StatusFound)
 	return

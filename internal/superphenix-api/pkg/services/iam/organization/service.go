@@ -17,7 +17,7 @@ import (
 const ModuleName = "organization"
 
 // auditResource is the resource type of the audit events of this module.
-const auditResource = "organization"
+var auditResource = router.Resource{Name: "organization", Label: "Organization"}
 
 // API is the overridable seam for the organization endpoints; the methods are the HTTP handlers.
 type API interface {
@@ -54,7 +54,8 @@ func Module(s API) router.Module {
 		Name:  ModuleName,
 		Mount: "/v1",
 		Routes: []router.Route{
-			router.Post("/organization", s.Create, jwtOrToken).Audited(auditResource, router.ActionCreate, ""),
+			router.Post("/organization", s.Create, jwtOrToken).
+				Audited(auditResource, router.ActionCreate, "").ReportingOrganization(),
 			router.Get("/organization/{orgaId}", s.Get, jwtOrToken, orgaRead),
 			router.Post("/organization/{orgaId}", s.Update, jwtOrToken, orgaRead, orgaWrite).
 				Audited(auditResource, router.ActionUpdate, "orgaId"),

@@ -261,7 +261,7 @@ func SetAuditRetentionDays(orgaId uuid.UUID, days *int) error {
 }
 
 // FindAllWithAuditRetention returns the organizations holding a retention override, deleted
-// ones included since their events remain.
+// ones included.
 func FindAllWithAuditRetention(ctx context.Context) ([]model.Organization, error) {
 	var list []model.Organization
 	result := db.Client.WithContext(ctx).Unscoped().Model(&model.Organization{}).

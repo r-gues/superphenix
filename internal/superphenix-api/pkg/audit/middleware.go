@@ -59,7 +59,7 @@ func newRecord(r *http.Request, store Store, declaration router.Audit) *Record {
 			OrganizationId: uuidParam(r, paramOrganization),
 			ProjectId:      uuidParam(r, paramProject),
 			EventType:      declaration.EventType(),
-			ResourceType:   declaration.ResourceType,
+			ResourceType:   declaration.Resource.Name,
 			SourceIp:       ClientIP(r),
 			RemoteAddr:     PeerAddr(r),
 			RequestId:      middleware.GetReqID(r.Context()),

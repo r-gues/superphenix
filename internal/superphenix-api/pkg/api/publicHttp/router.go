@@ -50,7 +50,7 @@ func RegisterModules(cfg *config.Config, reg *router.Registry) {
 	reg.Use("request-id", middleware.RequestID)
 	reg.Use("logger", middleware.Logger)
 	reg.Use("recoverer", middleware.Recoverer)
-	// RealIP overwrites RemoteAddr, the audit log keeps the raw peer too.
+	// Before RealIP, which overwrites RemoteAddr.
 	reg.Use("peer-addr", audit.CapturePeerAddr)
 	reg.Use("real-ip", middleware.RealIP)
 	reg.Use("clean-path", middleware.CleanPath)

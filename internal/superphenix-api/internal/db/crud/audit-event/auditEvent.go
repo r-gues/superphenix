@@ -1,5 +1,4 @@
-// Package auditEvent persists audit events. Events are append-only: besides the insert, the only
-// writes are the one-time finalization of a row and the retention sweep.
+// Package auditEvent persists audit events.
 package auditEvent
 
 import (
@@ -24,11 +23,13 @@ type Filter struct {
 	UserId         *uuid.UUID
 	UserEmail      string
 	EventTypes     []string
-	ResourceType   string
-	ResourceId     string
-	Status         string
-	From           *time.Time
-	To             *time.Time
+	// OtherThan, when set, also matches the events whose type is not in it.
+	OtherThan    []string
+	ResourceType string
+	ResourceId   string
+	Status       string
+	From         *time.Time
+	To           *time.Time
 
 	Limit  int
 	Offset int
@@ -112,8 +113,13 @@ func applyFilter(query *gorm.DB, filter Filter) *gorm.DB {
 	if filter.UserEmail != "" {
 		query = query.Where("lower(user_email) = lower(?)", filter.UserEmail)
 	}
-	if len(filter.EventTypes) > 0 {
+	switch {
+	case len(filter.EventTypes) > 0 && len(filter.OtherThan) > 0:
+		query = query.Where("event_type IN ? OR event_type NOT IN ?", filter.EventTypes, filter.OtherThan)
+	case len(filter.EventTypes) > 0:
 		query = query.Where("event_type IN ?", filter.EventTypes)
+	case len(filter.OtherThan) > 0:
+		query = query.Where("event_type NOT IN ?", filter.OtherThan)
 	}
 	if filter.ResourceType != "" {
 		query = query.Where("resource_type = ?", filter.ResourceType)

@@ -12,8 +12,7 @@ type peerAddrKey struct{}
 // maxAddrLength bounds what is stored from client-controlled headers.
 const maxAddrLength = 64
 
-// clientIPHeaders are read in order. They are only as trustworthy as the proxy in front of the
-// API, which is why the raw peer address is stored next to the result.
+// clientIPHeaders are read in order.
 var clientIPHeaders = []string{"CF-Connecting-IP", "X-Forwarded-For", "X-Real-IP"}
 
 // CapturePeerAddr keeps the TCP peer address in the context. It must be registered before

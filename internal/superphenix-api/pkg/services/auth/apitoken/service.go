@@ -12,7 +12,7 @@ import (
 const ModuleName = "api-token"
 
 // auditResource is the resource type of the audit events of this module.
-const auditResource = "api-token"
+var auditResource = router.Resource{Name: "api-token", Label: "API Token"}
 
 // API is the overridable seam for the API token endpoints; the methods are the HTTP handlers.
 type API interface {

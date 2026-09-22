@@ -107,7 +107,7 @@ func StartGarbageCollection(ctx context.Context, cfg *config.Config) {
 }
 
 // StartAuditLogGC runs the audit log retention sweep in the background until ctx is
-// cancelled. Like the Argo sweep it takes an advisory lock, so one replica sweeps per tick.
+// cancelled. One replica sweeps per tick.
 func StartAuditLogGC(ctx context.Context, cfg *config.Config) {
 	if !cfg.AuditLog.Enabled || !cfg.AuditLog.GarbageCollection.Enabled {
 		return

@@ -170,6 +170,22 @@ func TestList(t *testing.T) {
 			wantArgs: 11,
 		},
 		{
+			name:      "other than the declared types",
+			filter:    Filter{OrganizationId: &orgId, OtherThan: []string{"disk.create", "disk.delete"}, Limit: 25},
+			wantWhere: `WHERE organization_id = \$1 AND event_type NOT IN \(\$2,\$3\)`,
+			wantArgs:  3,
+		},
+		{
+			name: "declared types or other, next to another filter",
+			filter: Filter{
+				OrganizationId: &orgId, EventTypes: []string{"disk.create"}, OtherThan: []string{"disk.create", "disk.delete"},
+				Status: model.AuditStatusFailed, Limit: 25,
+			},
+			wantWhere: `WHERE organization_id = \$1 AND \(event_type IN \(\$2\) OR event_type NOT IN \(\$3,\$4\)\) ` +
+				`AND status = \$5`,
+			wantArgs: 5,
+		},
+		{
 			name:      "events without organization",
 			filter:    Filter{NoOrganization: true, UserId: &userId, Limit: 25},
 			wantWhere: `WHERE organization_id IS NULL AND user_id = \$1`,

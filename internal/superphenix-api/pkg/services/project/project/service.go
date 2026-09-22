@@ -16,7 +16,7 @@ import (
 const ModuleName = "project"
 
 // auditResource is the resource type of the audit events of this module.
-const auditResource = "project"
+var auditResource = router.Resource{Name: "project", Label: "Project"}
 
 // auditActionSave covers the routes that create or update depending on the body.
 const auditActionSave = "save"

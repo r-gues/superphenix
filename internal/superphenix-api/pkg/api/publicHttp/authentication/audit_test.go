@@ -60,7 +60,7 @@ func TestAuthenticateBeginsAuditEvent(t *testing.T) {
 				Validation: tt.validation,
 			}
 
-			audited := audit.Middleware(store)(router.Audit{ResourceType: "disk", Action: router.ActionCreate})
+			audited := audit.Middleware(store)(router.Audit{Resource: router.Resource{Name: "disk"}, Action: router.ActionCreate})
 			handler := audited(Authenticate(authType)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", nil))
 

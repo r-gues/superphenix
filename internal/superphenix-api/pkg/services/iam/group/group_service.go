@@ -16,7 +16,7 @@ import (
 const moduleName = "group"
 
 // auditResource is the resource type of the audit events of this module.
-const auditResource = "iam.group"
+var auditResource = router.Resource{Name: "iam.group", Label: "IAM Group"}
 
 // auditActionSave covers the routes that create or update depending on the body.
 const auditActionSave = "save"

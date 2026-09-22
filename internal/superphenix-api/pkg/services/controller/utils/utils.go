@@ -187,7 +187,6 @@ func CleanDb(ctx context.Context, id uuid.UUID) {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete product")
 	}
-	// The product was rolled back, its ID must not stay on the audit event.
 	audit.ClearResource(ctx)
 }
 
