@@ -5,6 +5,7 @@ package advisorylock
 
 import (
 	"context"
+	"database/sql/driver"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -43,6 +44,8 @@ func TryLock(ctx context.Context, db *gorm.DB, id int64) (release func(), acquir
 		defer cancel()
 		if _, err := conn.ExecContext(unlockCtx, "SELECT pg_advisory_unlock($1)", id); err != nil {
 			log.Error().Err(err).Int64("lockId", id).Msg("Failed to release advisory lock")
+			// Discard the connection so its session, and the lock with it, ends.
+			_ = conn.Raw(func(any) error { return driver.ErrBadConn })
 		}
 		_ = conn.Close()
 	}

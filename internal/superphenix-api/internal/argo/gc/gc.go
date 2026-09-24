@@ -49,30 +49,24 @@ func CallWithTimeout(ctx context.Context, c *argo.Client, db *gorm.DB) {
 	processId := uuid.New().String()
 	collectionCtx = context.WithValue(collectionCtx, gcLog.ProcessIdKey, fmt.Sprintf("collection-%s", processId))
 
-	processDone := make(chan bool, 1)
-
-	go garbageCollection(collectionCtx, c, db, processDone)
 	l := gcLog.GetProcessLogger(collectionCtx)
-	select {
-	case <-processDone:
-		l.Info().Ctx(collectionCtx).Msg("Operation completed successfully.")
-	case <-collectionCtx.Done():
-		l.Error().Ctx(collectionCtx).Msg("Operation canceled or timed out.")
+	if err := garbageCollection(collectionCtx, c, db); err != nil {
+		l.Error().Ctx(collectionCtx).Err(err).Msg("Garbage collection failed.")
+		return
 	}
+	l.Info().Ctx(collectionCtx).Msg("Operation completed successfully.")
 }
 
-func garbageCollection(ctx context.Context, c *argo.Client, db *gorm.DB, processDone chan<- bool) {
+func garbageCollection(ctx context.Context, c *argo.Client, db *gorm.DB) error {
 	logger := gcLog.GetProcessLogger(ctx)
 
 	release, acquired, err := advisorylock.TryLock(ctx, db, sweepLockID)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to acquire garbage collection lock")
-		return
+		return fmt.Errorf("acquire garbage collection lock: %w", err)
 	}
 	if !acquired {
 		logger.Debug().Msg("Garbage collection already running on another replica, skipping")
-		processDone <- true
-		return
+		return nil
 	}
 	defer release()
 
@@ -86,15 +80,15 @@ func garbageCollection(ctx context.Context, c *argo.Client, db *gorm.DB, process
 		logger.Error().Err(err).Msg(appCleaner.ErrorMessage())
 	}
 
-	if ctx.Err() != nil {
-		return
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	// Wait 1 min to ensure argo apps have been fully deleted
 	select {
 	case <-time.After(1 * time.Minute):
 	case <-ctx.Done():
-		return
+		return ctx.Err()
 	}
 
 	// Level 2 - Clean App Projects after applications are gone
@@ -103,5 +97,5 @@ func garbageCollection(ctx context.Context, c *argo.Client, db *gorm.DB, process
 	}
 
 	logger.Info().Msgf("Garbage collection finished at : %s", time.Now().String())
-	processDone <- true
+	return nil
 }
