@@ -8,15 +8,14 @@ var (
 
 	CpNetworkPolicies      = []string{"default", "none"}
 	WorkersNetworkPolicies = []string{"default", "strict", "none"}
-
-	// ReservedNodeRoles cannot be set on worker node groups.
-	ReservedNodeRoles = []string{"control-plane", "master"}
 )
 
 const (
 	KaasPrefix     = "kaas"
 	quantityFormat = "%dGi"
 	maxnodeGroup   = 5
+
+	nodeRoleLabelPrefix = "node-role.kubernetes.io/"
 
 	minReplicas = 1
 	maxReplicas = 10

@@ -2,6 +2,7 @@ package kaas
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -1009,11 +1010,16 @@ func TestCreateKaaSAppValues_NodeRole(t *testing.T) {
 	}{
 		{name: "role is rendered", role: "gpu", wantRole: "gpu", wantVersion: 1},
 		{name: "empty role is omitted", role: "", wantRole: "", wantVersion: 1},
-		{name: "uppercase role is rejected", role: "GPU", wantErr: true},
-		{name: "role with dot is rejected", role: "gpu.large", wantErr: true},
+		{name: "uppercase role is rendered", role: "GPU", wantRole: "GPU", wantVersion: 1},
+		{name: "role with dot is rendered", role: "gpu.large", wantRole: "gpu.large", wantVersion: 1},
+		{name: "role with underscore is rendered", role: "gpu_large", wantRole: "gpu_large", wantVersion: 1},
+		{name: "control-plane is rendered", role: "control-plane", wantRole: "control-plane", wantVersion: 1},
+		{name: "63 chars is rendered", role: strings.Repeat("a", 63), wantRole: strings.Repeat("a", 63), wantVersion: 1},
+		{name: "leading dash is rejected", role: "-gpu", wantErr: true},
+		{name: "trailing dot is rejected", role: "gpu.", wantErr: true},
+		{name: "slash is rejected", role: "gpu/large", wantErr: true},
+		{name: "space is rejected", role: "gpu large", wantErr: true},
 		{name: "role over 63 chars is rejected", role: strings.Repeat("a", 64), wantErr: true},
-		{name: "control-plane is reserved", role: "control-plane", wantErr: true},
-		{name: "master is reserved", role: "master", wantErr: true},
 		{name: "role change keeps version", role: "compute", oldSpec: updateFrom("gpu"), wantRole: "compute", wantVersion: 2},
 		{name: "legacy group gets a role and keeps version", role: "worker", oldSpec: updateFrom(""), wantRole: "worker", wantVersion: 2},
 	}
@@ -1025,6 +1031,10 @@ func TestCreateKaaSAppValues_NodeRole(t *testing.T) {
 				t.Fatalf("CreateKaaSAppValues() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr {
+				var roleErr *NodeRoleError
+				if !errors.As(err, &roleErr) {
+					t.Errorf("error = %v, want a *NodeRoleError", err)
+				}
 				return
 			}
 			if tt.wantRole == "" && strings.Contains(values, "nodeRole") {
@@ -1056,6 +1066,7 @@ func TestConvertAppToUpdateKaaSSpec_NodeRole(t *testing.T) {
 		role string
 	}{
 		{name: "round-trips a set role", role: "gpu"},
+		{name: "round-trips a mixed-case dotted role", role: "GPU.large"},
 		{name: "legacy group keeps an empty role", role: ""},
 	}
 

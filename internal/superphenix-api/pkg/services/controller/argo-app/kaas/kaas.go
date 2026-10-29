@@ -332,7 +332,7 @@ func CreateArgoApp(
 	values, gtr, err := CreateKaaSAppValues(ctx, localId, az.Code, spec, kaasConfig, oldSpec)
 	if err != nil {
 		log.Err(err).Msg("Failed to create app values")
-		return argo.CreateAppInfo{}, nil, fmt.Errorf("failed to create app values")
+		return argo.CreateAppInfo{}, nil, fmt.Errorf("failed to create app values: %w", err)
 	}
 
 	var helmParams strings.Builder
@@ -414,18 +414,27 @@ func parseNodeGroup(instances map[string]Instance, group Group, interfaces []Int
 	return nil
 }
 
-// validateNodeRole checks a node role is a DNS-1123 label and not reserved. Empty is valid.
+// validateNodeRole checks a node role is valid as both the node-role label name and value. Empty is valid.
 func validateNodeRole(role string) error {
 	if role == "" {
 		return nil
 	}
-	if errs := validation.IsDNS1123Label(role); len(errs) > 0 {
-		return fmt.Errorf("invalid node role %q: %s", role, strings.Join(errs, ", "))
-	}
-	if slices.Contains(ReservedNodeRoles, role) {
-		return fmt.Errorf("node role %q is reserved", role)
+	errs := validation.IsQualifiedName(nodeRoleLabelPrefix + role)
+	errs = append(errs, validation.IsValidLabelValue(role)...)
+	if len(errs) > 0 {
+		return &NodeRoleError{Role: role, Reasons: errs}
 	}
 	return nil
+}
+
+// NodeRoleError is a node role rejected by validateNodeRole.
+type NodeRoleError struct {
+	Role    string
+	Reasons []string
+}
+
+func (e *NodeRoleError) Error() string {
+	return fmt.Sprintf("invalid node role %q: %s", e.Role, strings.Join(e.Reasons, ", "))
 }
 
 // isSameGroup compares two Groups ignoring Replicas, Version and NodeRole.
