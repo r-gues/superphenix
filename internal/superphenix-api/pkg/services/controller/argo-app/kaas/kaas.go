@@ -20,6 +20,7 @@ import (
 
 	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 var nodeGroupNameRegex = regexp.MustCompile("^[a-zA-Z0-9-]*$")
@@ -382,6 +383,9 @@ func parseNodeGroup(instances map[string]Instance, group Group, interfaces []Int
 	if !slices.Contains(CpuValueList, group.Cpu) {
 		return fmt.Errorf("no such cpu value: %d", group.Cpu)
 	}
+	if err := validateNodeRole(group.NodeRole); err != nil {
+		return err
+	}
 
 	minStorageSize := resource.MustParse(fmt.Sprintf(quantityFormat, 1))
 	storage := resource.MustParse(fmt.Sprintf(quantityFormat, group.BootDiskSize))
@@ -394,6 +398,7 @@ func parseNodeGroup(instances map[string]Instance, group Group, interfaces []Int
 	instances[group.Name] = Instance{
 		Deployment: Deployment{
 			Replicas: group.Replicas,
+			NodeRole: group.NodeRole,
 		},
 		Template: Template{
 			Version:    group.Version,
@@ -409,7 +414,21 @@ func parseNodeGroup(instances map[string]Instance, group Group, interfaces []Int
 	return nil
 }
 
-// isSameGroup compares two Groups ignoring Replicas and Version.
+// validateNodeRole checks a node role is a DNS-1123 label and not reserved. Empty is valid.
+func validateNodeRole(role string) error {
+	if role == "" {
+		return nil
+	}
+	if errs := validation.IsDNS1123Label(role); len(errs) > 0 {
+		return fmt.Errorf("invalid node role %q: %s", role, strings.Join(errs, ", "))
+	}
+	if slices.Contains(ReservedNodeRoles, role) {
+		return fmt.Errorf("node role %q is reserved", role)
+	}
+	return nil
+}
+
+// isSameGroup compares two Groups ignoring Replicas, Version and NodeRole.
 func isSameGroup(g1, g2 Group) bool {
 	if g1.Cpu != g2.Cpu ||
 		g1.Memory != g2.Memory ||

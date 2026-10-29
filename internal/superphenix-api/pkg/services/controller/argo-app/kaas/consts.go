@@ -8,6 +8,9 @@ var (
 
 	CpNetworkPolicies      = []string{"default", "none"}
 	WorkersNetworkPolicies = []string{"default", "strict", "none"}
+
+	// ReservedNodeRoles cannot be set on worker node groups.
+	ReservedNodeRoles = []string{"control-plane", "master"}
 )
 
 const (
